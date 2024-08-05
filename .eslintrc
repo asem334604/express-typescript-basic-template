@@ -1,0 +1,24 @@
+module.exports = {
+    parser: '@typescript-eslint/parser',
+    extends: [
+        'eslint:recommended',
+        'plugin:@typescript-eslint/recommended',
+        'plugin:prettier/recommended', // Uses eslint-config-prettier to disable ESLint rules from conflicting with Prettier
+    ],
+    plugins: ['@typescript-eslint', 'prettier', 'unused-imports'],
+    rules: {
+        'prettier/prettier': 'error', // Runs Prettier as an ESLint rule and reports differences as individual ESLint issues
+        'no-unused-vars': 'off', // Disable the base rule as it can report incorrect errors
+        '@typescript-eslint/no-unused-vars': 'off', // Disable the TypeScript-specific rule as well
+        'unused-imports/no-unused-imports': 'error', // Removes unused imports
+        'unused-imports/no-unused-vars': [
+            'warn',
+            {
+                vars: 'all',
+                varsIgnorePattern: '^_',
+                args: 'after-used',
+                argsIgnorePattern: '^_',
+            },
+        ],
+    },
+};
