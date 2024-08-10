@@ -5,6 +5,8 @@ import helmet from "helmet";
 import morganMiddleware from "./config/morgan";
 import logger from "./config/winston";
 
+app.use(express.json());
+
 dotenv.config();
 
 
