@@ -990,39 +990,8 @@ If your configuration is correct, you should see a message in the console indica
 
 In this step, we’ll create basic routes for handling HTTP requests using Express.js. We’ll cover how to set up `GET`, `POST`, and parameterized routes, as well as how to handle query parameters.
 
-#### Step 1: Setting Up Express
 
-If you haven’t already installed Express, do so by running:
-
-```bash
-npm install express @types/express
-```
-
-- **express**: A fast, unopinionated, minimalist web framework for Node.js.
-- **@types/express**: TypeScript type definitions for Express.
-
-#### Step 2: Creating a Basic Express Server
-
-Create a new file named `server.ts` in your `src` directory:
-
-```typescript
-import express, { Application } from 'express';
-import moviesRouter from './routes/moviesRouter';
-
-const app: Application = express();
-const port = 3000;
-
-app.use(express.json());
-app.use('/movies', moviesRouter);
-
-app.listen(port, () => {
-    console.log(`Server is running on http://localhost:${port}`);
-});
-```
-
-This basic Express server listens on port `3000` and uses `moviesRouter` for handling routes under `/movies`.
-
-#### Step 3: Creating the Movies Router
+#### Step 1: Creating the Movies Router
 
 Create a new directory named `routes` inside your `src` directory. Inside `routes`, create a file named `moviesRouter.ts`:
 
@@ -1088,21 +1057,8 @@ export default moviesRouter;
 - **POST Route**: Handles requests to `/movies/add`. It expects a movie object in the request body and simulates adding it to a database.
 - **Parameterized Route**: Handles requests to `/movies/:id`, where `:id` is a dynamic parameter representing a movie’s ID.
 
-#### Step 4: Testing the Routes
 
-Start the Express server by running:
-
-```bash
-npx ts-node src/server.ts
-```
-
-Use a tool like Postman or cURL to test the routes:
-
-- **GET `/movies?q=somequery`**: Should return a list of movies matching the query.
-- **POST `/movies/add`**: Should add a new movie when provided with an ID and name in the request body.
-- **GET `/movies/1`**: Should return a movie with the ID `1`.
-
-#### Step 5: Example Client-Side Integration
+#### Step 2: Example Client-Side Integration
 
 For the POST route `/movies/add`, here’s how you might integrate it on the client side:
 
@@ -1139,12 +1095,11 @@ In this step, we'll configure TypeORM for PostgreSQL, define entities, and demon
 First, install TypeORM along with the PostgreSQL driver:
 
 ```bash
-npm install typeorm reflect-metadata pg
+npm install typeorm reflect-metadata
 ```
 
 - **typeorm**: The ORM library for TypeScript and JavaScript.
 - **reflect-metadata**: A dependency required by TypeORM for its decorators.
-- **pg**: The PostgreSQL client library, which TypeORM uses to connect to PostgreSQL.
 
 #### Step 2: Create TypeORM Configuration
 
@@ -1341,53 +1296,6 @@ AppDataSource.initialize()
 
 Here, **AppDataSource.initialize()** initializes the TypeORM data source before starting the Express server.
 
-#### Step 6: Define Relationships in DTOs (Optional)
-
-If you want to include relationships in your DTOs, you can do something like this:
-
-```typescript
-import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
-
-export class GenreDto {
-    @IsNotEmpty()
-    @IsNumber()
-    id: number;
-
-    @IsNotEmpty()
-    @IsString()
-    name: string;
-
-    constructor(id: number, name: string) {
-        this.id = id;
-        this.name = name;
-    }
-}
-
-export class MovieDto {
-    @IsNotEmpty()
-    @IsNumber()
-    id: number;
-
-    @IsNotEmpty()
-    @IsString()
-    title: string;
-
-    @IsNotEmpty()
-    @IsNumber()
-    genreId: number;
-
-    @IsNotEmpty()
-    @IsString()
-    genreName: string;
-
-    constructor(id: number, title: string, genreId: number, genreName: string) {
-        this.id = id;
-        this.title = title;
-        this.genreId = genreId;
-        this.genreName = genreName;
-    }
-}
-```
 
 
 ## 6. Making an MVC Structure
@@ -1399,17 +1307,25 @@ In this chapter, we'll establish the Model-View-Controller (MVC) structure for y
 The repository layer interacts directly with the database, providing methods to retrieve, insert, update, and delete data. Here are examples of different approaches to querying the database using TypeORM's QueryBuilder, raw SQL, and manual database management with `pool.query`.
 
 ##### 1. Using TypeORM’s QueryBuilder
+Certainly! Below is the explanation of what `EntityRepository` and `Repository` are responsible for in TypeORM, followed by the code examples:
 
-TypeORM’s QueryBuilder allows you to build complex SQL queries programmatically.
+### Explanation
+
+- **`Repository` Class**: 
+  The `Repository` class in TypeORM is a generic class that provides methods for managing database entities. It handles common operations like finding, saving, updating, and deleting records. Each entity in your application typically has its own repository, which allows you to interact with that entity's records in the database.
+
+  For example, if you have an entity called `Movie`, the corresponding repository (`MovieRepository`) would allow you to perform CRUD (Create, Read, Update, Delete) operations on `Movie` records.
+
+
+### 1. Example with QueryBuilder and Extending TypeORM's `Repository` Class
 
 ```typescript
-import { AppDataSource } from '../ormconfig';
+import { Repository } from 'typeorm';
 import { Movie } from '../entities/Movie';
 
-export class MovieRepository {
+export class MovieRepository extends Repository<Movie> {
     async getTopRatedMovies(year: number): Promise<Movie[]> {
-        return await AppDataSource.getRepository(Movie)
-            .createQueryBuilder('movie')
+        return await this.createQueryBuilder('movie')
             .where('movie.rating > :rating', { rating: 8 })
             .andWhere('movie.releaseYear = :year', { year })
             .orderBy('movie.title', 'ASC')
@@ -1418,7 +1334,32 @@ export class MovieRepository {
 }
 ```
 
-This method fetches movies with a rating greater than 8 that were released in a specific year.
+- **Explanation**: In this example, the `MovieRepository` class extends the `Repository` class, inheriting all its methods, and adds a custom method `getTopRatedMovies` that uses the `QueryBuilder` to construct a complex SQL query. The `QueryBuilder` allows for flexible and powerful query construction, especially useful for complex conditions or joins.
+
+### 2. Example Using TypeORM's Built-in Repository Methods Without QueryBuilder
+
+```typescript
+import { Repository } from 'typeorm';
+import { Movie } from '../entities/Movie';
+
+export class MovieRepository extends Repository<Movie> {
+    async getTopRatedMovies(year: number): Promise<Movie[]> {
+        return await this.find({
+            where: {
+                rating: MoreThan(8),
+                releaseYear: year
+            },
+            order: {
+                title: 'ASC'
+            }
+        });
+    }
+}
+```
+
+- **Explanation**: In this example, the `MovieRepository` class uses TypeORM’s built-in `find` method instead of `QueryBuilder`. The `find` method is simpler and more concise, utilizing TypeORM's query helpers like `MoreThan` to filter results. This approach is more declarative and is often preferred for straightforward queries. 
+
+These examples demonstrate how you can leverage both the `Repository` class’s built-in methods and the `QueryBuilder` for different querying needs, all within the context of a custom repository created with the `EntityRepository` decorator.
 
 ##### 2. Using Raw SQL with TypeORM
 
