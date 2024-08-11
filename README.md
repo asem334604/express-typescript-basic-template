@@ -704,3 +704,769 @@ In this chapter, we set up code standards for your TypeScript and Express projec
 
 </details>
 
+
+<details>
+  <summary><strong>Setting Up Backend Structure (MVC) for PostgreSQL Database (click to expand) </strong></summary>
+
+  ## Navigation
+
+  - [1. Installing Required Packages](#1-installing-required-packages)
+  - [2. Setting Up `pg-mem` for Unit and Integration Testing](#2-setting-up-pg-mem-for-unit-and-integration-testing)
+  - [3. Basic PostgreSQL Configuration](#3-basic-postgresql-configuration)
+  - [4. Basic Route Creation](#4-basic-route-creation)
+  - [5. Setting Configuration for TypeORM](#5-setting-configuration-for-typeorm)
+  - [6. Making an MVC Structure](#6-making-an-mvc-structure)
+
+
+## 1. Installing Required Packages
+
+### 1. Installing Required Packages
+
+To set up a backend structure using PostgreSQL in a Node.js project, you need to install several essential packages. These packages will help you interact with the PostgreSQL database, set up in-memory databases for testing, and ensure proper TypeScript support.
+
+#### Step 1: Initialize a New Node.js Project
+If you haven't already, start by initializing a new Node.js project.
+
+```bash
+npm init -y
+```
+
+This command will create a `package.json` file in your project directory.
+
+#### Step 2: Install Required Packages
+Run the following command to install the necessary packages:
+
+```bash
+npm install pg pg-mem @types/pg
+```
+
+Here's a brief overview of what each package does:
+
+- **pg**: This is the official PostgreSQL client for Node.js. It allows you to connect to and interact with a PostgreSQL database.
+- **pg-mem**: This package provides an in-memory PostgreSQL instance, which is extremely useful for running unit and integration tests without needing an actual database instance.
+- **@types/pg**: This package provides TypeScript type definitions for the `pg` library, ensuring proper type-checking and IntelliSense in your TypeScript project.
+
+
+---
+
+
+
+## 2. Setting Up `pg-mem` for Unit and Integration Testing
+
+### 2. Setting Up `pg-mem` for Unit and Integration Testing
+
+In this step, we will set up `pg-mem` to create an in-memory PostgreSQL instance for running unit and integration tests. This allows you to test your database interactions without requiring a live PostgreSQL server.
+
+#### Step 1: Import Required Modules
+First, create a new file in your `src` directory named `testDb.ts` (or a similar name). Import the necessary modules:
+
+```typescript
+import { newDb } from 'pg-mem';
+import { Pool } from 'pg';
+```
+
+- **newDb**: A function provided by `pg-mem` to create a new in-memory database.
+- **Pool**: The PostgreSQL connection pool provided by the `pg` library, which manages connections to the database.
+
+#### Step 2: Set Up the Mock Database
+### 2. Setting Up `pg-mem` for Unit and Integration Testing (Updated for Jest)
+
+In this section, you'll learn how to set up `pg-mem` for testing with Jest, a popular testing framework for JavaScript and TypeScript.
+
+#### Step 1: Import Required Modules
+Create a new file in your `src` directory named `testDb.ts` (or a similar name). Import the necessary modules:
+
+```typescript
+import { newDb } from 'pg-mem';
+import { Pool } from 'pg';
+```
+
+- **newDb**: A function provided by `pg-mem` to create a new in-memory database.
+- **Pool**: The PostgreSQL connection pool provided by the `pg` library, which manages connections to the database.
+
+#### Step 2: Set Up the Mock Database
+We'll create a function to set up the mock database using `pg-mem`:
+
+```typescript
+const pgMem = newDb();
+
+export const setupMockDb = async () => {
+    const pool = new Pool({
+        host: 'localhost',
+        port: 5432,
+        database: 'testdb',
+        user: 'user',
+        password: 'password',
+    });
+
+    const client = await pool.connect();
+    pgMem.adapters.createPg().Client(client);
+
+    return pool;
+};
+```
+
+- **pgMem**: This is your in-memory PostgreSQL instance.
+- **setupMockDb**: This function sets up the connection between the in-memory database and a PostgreSQL `Pool`.
+
+#### Step 3: Example Test for a Transactional Method
+Let's write a schematic example to test a transactional method using the mock database.
+
+1. **Create a Sample Repository:**
+
+   In `src/repositories/movieRepository.ts`, create a repository with a method that performs a transaction:
+
+   ```typescript
+   import { Pool } from 'pg';
+   
+   export class MovieRepository {
+       constructor(private pool: Pool) {}
+
+       async addMovie(id: number, name: string, isFavorite: boolean): Promise<void> {
+           const client = await this.pool.connect();
+           try {
+               await client.query('BEGIN');
+               await client.query(
+                   'INSERT INTO movies (id, name, is_favorite) VALUES ($1, $2, $3)',
+                   [id, name, isFavorite]
+               );
+               await client.query('COMMIT');
+           } catch (error) {
+               await client.query('ROLLBACK');
+               throw error;
+           } finally {
+               client.release();
+           }
+       }
+   }
+   ```
+
+   This repository method begins a transaction, inserts a movie into the database, and then commits the transaction. If any error occurs, it rolls back the transaction.
+
+2. **Write a Test Case Using Jest:**
+
+   Create a test case to ensure that this transaction works as expected. Place this test in `src/repositories/movieRepository.test.ts`:
+
+   ```typescript
+   import { setupMockDb } from '../testDb';
+   import { MovieRepository } from './movieRepository';
+   import { Pool } from 'pg';
+   
+   describe('MovieRepository', () => {
+       let pool: Pool;
+       let movieRepository: MovieRepository;
+   
+       beforeAll(async () => {
+           pool = await setupMockDb();
+           movieRepository = new MovieRepository(pool);
+           await pool.query(`
+               CREATE TABLE movies (
+                   id INT PRIMARY KEY,
+                   name TEXT NOT NULL,
+                   is_favorite BOOLEAN NOT NULL
+               )
+           `);
+       });
+   
+       afterAll(async () => {
+           await pool.end();
+       });
+
+       it('should add a movie successfully', async () => {
+           await movieRepository.addMovie(1, 'Inception', true);
+   
+           const result = await pool.query('SELECT * FROM movies WHERE id = $1', [1]);
+           expect(result.rows.length).toBe(1);
+           expect(result.rows[0].name).toBe('Inception');
+           expect(result.rows[0].is_favorite).toBe(true);
+       });
+   });
+   ```
+
+   - **beforeAll**: Initializes the mock database and repository before running any tests. It also creates the `movies` table.
+   - **afterAll**: Closes the database connection after all tests have run.
+   - **it**: Tests the `addMovie` method to ensure that it correctly inserts a movie into the database.
+
+#### Step 4: Run the Tests with Jest
+Finally, run your tests to ensure everything works correctly. If you have Jest installed, you can run:
+
+```bash
+npx jest
+```
+
+Jest will automatically find and run all test files in your project that match the pattern `*.test.ts`.
+
+---
+
+## 3. Basic PostgreSQL Configuration
+
+### 3. Basic PostgreSQL Configuration
+
+In this step, we'll configure the connection to a PostgreSQL database using the `pg` package. This configuration will allow your application to connect to the PostgreSQL database and perform various operations such as querying, inserting, updating, and deleting data.
+
+#### Step 1: Create a Database Configuration File
+
+Create a new directory named `config` inside your `src` directory. Inside `config`, create a file named `db.ts` to hold your database configuration:
+
+```typescript
+// src/config/db.ts
+import { Pool } from 'pg';
+
+// Create a new Pool instance with PostgreSQL connection details
+const pool = new Pool({
+    host: 'localhost',  // The hostname of the PostgreSQL server
+    port: 5432,         // The port on which PostgreSQL is listening (default is 5432)
+    database: 'mydb',   // The name of the database you want to connect to
+    user: 'user',       // The username for connecting to the database
+    password: 'password' // The password for the specified user
+});
+
+// Export the Pool instance to use it in other parts of your application
+export default pool;
+```
+
+- **host**: The hostname where your PostgreSQL server is running, typically `localhost` if running locally.
+- **port**: The port number for the PostgreSQL server. The default is `5432`.
+- **database**: The name of the database you want to connect to.
+- **user**: The username for authenticating with the PostgreSQL server.
+- **password**: The password associated with the specified user.
+
+#### Step 2: Use the Database Configuration in Your Application
+
+To use this configuration in other parts of your application, simply import the `pool` object wherever you need to interact with the database.
+
+For example, in a repository or service:
+
+```typescript
+// src/repositories/movieRepository.ts
+import pool from '../config/db';
+
+export class MovieRepository {
+    async getMovies(): Promise<any[]> {
+        const result = await pool.query('SELECT * FROM movies');
+        return result.rows;
+    }
+
+    // Other methods interacting with the database
+}
+```
+
+Here, the `pool.query` method is used to execute SQL queries against the database. The `getMovies` method retrieves all records from the `movies` table.
+
+#### Step 3: Test the Configuration
+
+To ensure your configuration is working correctly, you can create a simple script to connect to the database and perform a basic query.
+
+Create a file `src/testDbConnection.ts`:
+
+```typescript
+import pool from './config/db';
+
+(async () => {
+    try {
+        const result = await pool.query('SELECT NOW()');
+        console.log('Database connected:', result.rows[0]);
+    } catch (error) {
+        console.error('Database connection error:', error);
+    } finally {
+        pool.end();
+    }
+})();
+```
+
+Run this script using `ts-node` to test the connection:
+
+```bash
+npx ts-node src/testDbConnection.ts
+```
+
+If your configuration is correct, you should see a message in the console indicating that the database is connected, along with the current timestamp.
+
+---
+
+## 4. Basic Route Creation
+
+### 4. Basic Route Creation
+
+In this step, we’ll create basic routes for handling HTTP requests using Express.js. We’ll cover how to set up `GET`, `POST`, and parameterized routes, as well as how to handle query parameters.
+
+#### Step 1: Setting Up Express
+
+If you haven’t already installed Express, do so by running:
+
+```bash
+npm install express @types/express
+```
+
+- **express**: A fast, unopinionated, minimalist web framework for Node.js.
+- **@types/express**: TypeScript type definitions for Express.
+
+#### Step 2: Creating a Basic Express Server
+
+Create a new file named `server.ts` in your `src` directory:
+
+```typescript
+import express, { Application } from 'express';
+import moviesRouter from './routes/moviesRouter';
+
+const app: Application = express();
+const port = 3000;
+
+app.use(express.json());
+app.use('/movies', moviesRouter);
+
+app.listen(port, () => {
+    console.log(`Server is running on http://localhost:${port}`);
+});
+```
+
+This basic Express server listens on port `3000` and uses `moviesRouter` for handling routes under `/movies`.
+
+#### Step 3: Creating the Movies Router
+
+Create a new directory named `routes` inside your `src` directory. Inside `routes`, create a file named `moviesRouter.ts`:
+
+```typescript
+import express, { Request, Response, NextFunction } from 'express';
+
+const moviesRouter = express.Router();
+
+// Example: GET Route
+moviesRouter.get('/', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const query = req.query.q as string;
+
+        if (!query) {
+            res.status(400).send('Query parameter "q" is required');
+            return;
+        }
+
+        // Simulate fetching movies based on the query
+        const movies = [{ id: 1, name: `Movie matching ${query}` }]; // Mock data
+
+        res.json(movies);
+    } catch (e) {
+        next(e);
+    }
+});
+
+// Example: POST Route
+moviesRouter.post('/add', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { id, name } = req.body;
+
+        if (!id || !name) {
+            res.status(400).send('ID and Name are required');
+            return;
+        }
+
+        // Simulate adding a movie
+        res.status(201).json({ message: 'Movie added successfully', movie: { id, name } });
+    } catch (e) {
+        next(e);
+    }
+});
+
+// Example: Route with Parameter
+moviesRouter.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { id } = req.params;
+
+        // Simulate fetching a movie by ID
+        const movie = { id, name: 'Sample Movie' }; // Mock data
+
+        res.json(movie);
+    } catch (e) {
+        next(e);
+    }
+});
+
+export default moviesRouter;
+```
+
+- **GET Route**: Handles requests to `/movies` and optionally accepts a query parameter `q`. If `q` is provided, it returns a list of movies matching the query.
+- **POST Route**: Handles requests to `/movies/add`. It expects a movie object in the request body and simulates adding it to a database.
+- **Parameterized Route**: Handles requests to `/movies/:id`, where `:id` is a dynamic parameter representing a movie’s ID.
+
+#### Step 4: Testing the Routes
+
+Start the Express server by running:
+
+```bash
+npx ts-node src/server.ts
+```
+
+Use a tool like Postman or cURL to test the routes:
+
+- **GET `/movies?q=somequery`**: Should return a list of movies matching the query.
+- **POST `/movies/add`**: Should add a new movie when provided with an ID and name in the request body.
+- **GET `/movies/1`**: Should return a movie with the ID `1`.
+
+#### Step 5: Example Client-Side Integration
+
+For the POST route `/movies/add`, here’s how you might integrate it on the client side:
+
+```typescript
+const handleAddFavoriteMovie = async (movie: { id: number; name: string }) => {
+    const response = await fetch(`http://localhost:3000/movies/add`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(movie),
+    });
+
+    if (response.ok) {
+        console.log('Movie added successfully!');
+    } else {
+        console.error('Failed to add movie.');
+    }
+};
+```
+
+This function sends a `POST` request to the `/movies/add` endpoint to add a new movie.
+
+---
+
+## 5. Setting Configuration for TypeORM
+
+### 5. Setting Up TypeORM Configuration
+
+In this step, we'll configure TypeORM, an ORM (Object-Relational Mapper) for TypeScript and JavaScript, to work with PostgreSQL. This setup will include defining a basic configuration, creating entities, and setting up DTOs (Data Transfer Objects) for type validation.
+
+#### Step 1: Install TypeORM and Required Packages
+
+First, install TypeORM along with the PostgreSQL driver:
+
+```bash
+npm install typeorm reflect-metadata pg
+```
+
+- **typeorm**: The ORM library for TypeScript and JavaScript.
+- **reflect-metadata**: A dependency required by TypeORM for its decorators.
+- **pg**: The PostgreSQL client library, which TypeORM uses to connect to PostgreSQL.
+
+#### Step 2: Create TypeORM Configuration
+
+Create a new file named `ormconfig.ts` in the root of your project directory:
+
+```typescript
+import { DataSource } from 'typeorm';
+import { Movie } from './src/entities/Movie';
+
+const AppDataSource = new DataSource({
+    type: 'postgres',
+    host: 'localhost',
+    port: 5432,
+    username: 'user',
+    password: 'password',
+    database: 'mydb',
+    entities: [Movie],
+    synchronize: true, // Automatically create database tables
+    logging: true, // Optional: Log SQL queries for debugging
+});
+
+export default AppDataSource;
+```
+
+In this configuration:
+
+- **type**: Specifies the database type (PostgreSQL in this case).
+- **host, port, username, password, database**: Connection details for your PostgreSQL database.
+- **entities**: An array of entities that TypeORM will manage.
+- **synchronize**: Automatically synchronize the database schema with your entity definitions. Set this to `false` in production.
+
+#### Step 3: Define a Basic Entity
+
+Create a new directory named `entities` inside your `src` directory. Inside `entities`, create a file named `Movie.ts`:
+
+```typescript
+import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+
+@Entity()
+export class Movie {
+    @PrimaryGeneratedColumn()
+    id: number;
+
+    @Column()
+    name: string;
+
+    @Column()
+    isFavorite: boolean;
+}
+```
+
+In this entity definition:
+
+- **@Entity**: Decorator that marks this class as an entity to be managed by TypeORM.
+- **@PrimaryGeneratedColumn**: Decorator that marks the `id` property as the primary key and auto-generates it.
+- **@Column**: Decorator that marks the properties as columns in the database.
+
+#### Step 4: Define a DTO for Data Validation
+
+Create a new directory named `dto` inside your `src` directory. Inside `dto`, create a file named `MovieDto.ts`:
+
+```typescript
+import { IsBoolean, IsNotEmpty, IsNumber, IsString } from 'class-validator';
+
+export class MovieDto {
+    @IsNotEmpty()
+    @IsNumber()
+    id: number;
+
+    @IsNotEmpty()
+    @IsString()
+    name: string;
+
+    @IsNotEmpty()
+    @IsBoolean()
+    isFavorite: boolean;
+
+    constructor(id: number, name: string, isFavorite: boolean) {
+        this.id = id;
+        this.name = name;
+        this.isFavorite = isFavorite;
+    }
+}
+```
+
+In this DTO:
+
+- **@IsNotEmpty**: Ensures that the field is not empty.
+- **@IsNumber, @IsString, @IsBoolean**: Validates the type of the field.
+
+#### Step 5: Integrate TypeORM into Your Application
+
+Modify your `server.ts` file to initialize TypeORM and use it in your application:
+
+```typescript
+import 'reflect-metadata';
+import express, { Application } from 'express';
+import AppDataSource from './ormconfig';
+import moviesRouter from './routes/moviesRouter';
+
+const app: Application = express();
+const port = 3000;
+
+app.use(express.json());
+app.use('/movies', moviesRouter);
+
+AppDataSource.initialize()
+    .then(() => {
+        console.log('Data Source has been initialized!');
+        app.listen(port, () => {
+            console.log(`Server is running on http://localhost:${port}`);
+        });
+    })
+    .catch((error) => {
+        console.error('Error during Data Source initialization', error);
+    });
+```
+
+Here, **AppDataSource.initialize()** initializes the TypeORM data source before starting the Express server.
+
+---
+
+## 6. Making an MVC Structure
+
+
+### 6. Making an MVC Structure
+
+In this step, we'll set up a basic MVC (Model-View-Controller) structure for your application using TypeORM with PostgreSQL. This includes creating a repository layer for database operations, a service layer for business logic, and a controller layer for handling HTTP requests. We’ll also show how to integrate these layers.
+
+#### Step 1: Define the MVC Structure
+
+Here’s how the MVC structure will be organized:
+
+- **Models**: Define the structure of your data (e.g., TypeORM entities).
+- **Views**: In a typical MVC application, views are the user interface components. In an API context, this layer is usually minimal or omitted since it primarily deals with JSON responses.
+- **Controllers**: Handle HTTP requests and interact with services.
+- **Services**: Contain business logic and interact with the repository layer.
+- **Repositories**: Perform database operations using TypeORM.
+
+#### Step 2: Create a Repository Layer
+
+Create a `repositories` directory inside your `src` directory. Inside `repositories`, create a file named `MovieRepository.ts`:
+
+```typescript
+import { Repository, DataSource } from 'typeorm';
+import { Movie } from '../entities/Movie';
+import AppDataSource from '../ormconfig';
+
+export class MovieRepository extends Repository<Movie> {
+    constructor() {
+        super(Movie, AppDataSource.manager);
+    }
+
+    async addMovie(movie: Movie): Promise<Movie> {
+        return this.save(movie);
+    }
+
+    async getMovies(): Promise<Movie[]> {
+        return this.find();
+    }
+
+    async getMovieById(id: number): Promise<Movie | null> {
+        return this.findOneBy({ id });
+    }
+
+    async updateMovie(movie: Movie): Promise<Movie> {
+        await this.save(movie);
+        return movie;
+    }
+
+    async deleteMovie(id: number): Promise<void> {
+        await this.delete(id);
+    }
+}
+```
+
+In this repository:
+
+- **addMovie**: Adds a new movie to the database.
+- **getMovies**: Retrieves all movies.
+- **getMovieById**: Retrieves a movie by its ID.
+- **updateMovie**: Updates an existing movie.
+- **deleteMovie**: Deletes a movie by its ID.
+
+#### Step 3: Create a Service Layer
+
+Create a `services` directory inside your `src` directory. Inside `services`, create a file named `MovieService.ts`:
+
+```typescript
+import { MovieRepository } from '../repositories/MovieRepository';
+import { Movie } from '../entities/Movie';
+import { MovieDto } from '../dto/MovieDto';
+
+export class MovieService {
+    private movieRepository = new MovieRepository();
+
+    async addMovie(dto: MovieDto): Promise<Movie> {
+        const movie = new Movie();
+        movie.id = dto.id;
+        movie.name = dto.name;
+        movie.isFavorite = dto.isFavorite;
+
+        return this.movieRepository.addMovie(movie);
+    }
+
+    async getMovies(): Promise<Movie[]> {
+        return this.movieRepository.getMovies();
+    }
+
+    async getMovieById(id: number): Promise<Movie | null> {
+        return this.movieRepository.getMovieById(id);
+    }
+
+    async updateMovie(dto: MovieDto): Promise<Movie> {
+        const movie = await this.movieRepository.getMovieById(dto.id);
+        if (movie) {
+            movie.name = dto.name;
+            movie.isFavorite = dto.isFavorite;
+            return this.movieRepository.updateMovie(movie);
+        }
+        throw new Error('Movie not found');
+    }
+
+    async deleteMovie(id: number): Promise<void> {
+        await this.movieRepository.deleteMovie(id);
+    }
+}
+```
+
+In this service:
+
+- **addMovie**: Converts a DTO to an entity and adds it to the database.
+- **getMovies**: Retrieves all movies using the repository.
+- **getMovieById**: Retrieves a specific movie by its ID.
+- **updateMovie**: Updates an existing movie based on the DTO.
+- **deleteMovie**: Deletes a movie by its ID.
+
+#### Step 4: Create a Controller Layer
+
+Update the `routes/moviesRouter.ts` file to use the service layer:
+
+```typescript
+import express, { Request, Response, NextFunction } from 'express';
+import { MovieService } from '../services/MovieService';
+import { MovieDto } from '../dto/MovieDto';
+
+const moviesRouter = express.Router();
+const movieService = new MovieService();
+
+// GET Route
+moviesRouter.get('/', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const movies = await movieService.getMovies();
+        res.json(movies);
+    } catch (e) {
+        next(e);
+    }
+});
+
+// POST Route
+moviesRouter.post('/add', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const dto = req.body as MovieDto;
+        const movie = await movieService.addMovie(dto);
+        res.status(201).json(movie);
+    } catch (e) {
+        next(e);
+    }
+});
+
+// GET Route with Parameter
+moviesRouter.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const id = parseInt(req.params.id);
+        const movie = await movieService.getMovieById(id);
+        if (movie) {
+            res.json(movie);
+        } else {
+            res.status(404).send('Movie not found');
+        }
+    } catch (e) {
+        next(e);
+    }
+});
+
+// PUT Route
+moviesRouter.put('/update', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const dto = req.body as MovieDto;
+        const movie = await movieService.updateMovie(dto);
+        res.json(movie);
+    } catch (e) {
+        next(e);
+    }
+});
+
+// DELETE Route
+moviesRouter.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const id = parseInt(req.params.id);
+        await movieService.deleteMovie(id);
+        res.status(204).send();
+    } catch (e) {
+        next(e);
+    }
+});
+
+export default moviesRouter;
+```
+
+- **GET `/`**: Retrieves all movies.
+- **POST `/add`**: Adds a new movie.
+- **GET `/:id`**: Retrieves a movie by ID.
+- **PUT `/update`**: Updates an existing movie.
+- **DELETE `/:id`**: Deletes a movie by ID.
+
+#### Step 5: Testing the MVC Structure
+
+Ensure that your application works correctly by running the server and testing the routes using a tool like Postman or cURL.
+
+---
+
+
+</details>
+
