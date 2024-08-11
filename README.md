@@ -1130,9 +1130,9 @@ This function sends a `POST` request to the `/movies/add` endpoint to add a new 
 
 ## 5. Setting Configuration for TypeORM
 
-### 5. Setting Up TypeORM Configuration
+### 5. Setting Up TypeORM Configuration with Entity Relationships
 
-In this step, we'll configure TypeORM, an ORM (Object-Relational Mapper) for TypeScript and JavaScript, to work with PostgreSQL. This setup will include defining a basic configuration, creating entities, and setting up DTOs (Data Transfer Objects) for type validation.
+In this step, we'll configure TypeORM for PostgreSQL, define entities, and demonstrate how to create relationships between entities using TypeORM decorators. This setup will include defining a basic configuration, creating entities with one-to-one, many-to-one, and many-to-many relationships, and setting up DTOs (Data Transfer Objects) for type validation.
 
 #### Step 1: Install TypeORM and Required Packages
 
@@ -1152,7 +1152,10 @@ Create a new file named `ormconfig.ts` in the root of your project directory:
 
 ```typescript
 import { DataSource } from 'typeorm';
+import { User } from './src/entities/User';
+import { UserProfile } from './src/entities/UserProfile';
 import { Movie } from './src/entities/Movie';
+import { Genre } from './src/entities/Genre';
 
 const AppDataSource = new DataSource({
     type: 'postgres',
@@ -1161,7 +1164,7 @@ const AppDataSource = new DataSource({
     username: 'user',
     password: 'password',
     database: 'mydb',
-    entities: [Movie],
+    entities: [User, UserProfile, Movie, Genre],
     synchronize: true, // Automatically create database tables
     logging: true, // Optional: Log SQL queries for debugging
 });
@@ -1176,12 +1179,62 @@ In this configuration:
 - **entities**: An array of entities that TypeORM will manage.
 - **synchronize**: Automatically synchronize the database schema with your entity definitions. Set this to `false` in production.
 
-#### Step 3: Define a Basic Entity
+#### Step 3: Define Entities with Relationships
 
-Create a new directory named `entities` inside your `src` directory. Inside `entities`, create a file named `Movie.ts`:
+We will define several entities: `User`, `UserProfile`, `Movie`, and `Genre`. These entities will have various relationships such as one-to-one, many-to-one, and one-to-many.
+
+##### User and UserProfile (One-to-One Relationship)
+
+Create a `User.ts` file inside the `entities` directory:
 
 ```typescript
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn } from 'typeorm';
+import { UserProfile } from './UserProfile';
+
+@Entity()
+export class User {
+    @PrimaryGeneratedColumn()
+    id: number;
+
+    @Column()
+    name: string;
+
+    @OneToOne(() => UserProfile, profile => profile.user)
+    @JoinColumn()
+    profile: UserProfile;
+}
+```
+
+Create a `UserProfile.ts` file inside the `entities` directory:
+
+```typescript
+import { Entity, PrimaryGeneratedColumn, Column, OneToOne } from 'typeorm';
+import { User } from './User';
+
+@Entity()
+export class UserProfile {
+    @PrimaryGeneratedColumn()
+    userId: number;
+
+    @Column()
+    bio: string;
+
+    @OneToOne(() => User, user => user.profile)
+    user: User;
+}
+```
+
+- **One-to-One**: A user has one profile, and each profile belongs to one user.
+- **@OneToOne**: Defines the one-to-one relationship.
+- **@JoinColumn**: Specifies the owning side of the relationship.
+
+##### Movie and Genre (Many-to-One and One-to-Many Relationship)
+
+Create a `Movie.ts` file inside the `entities` directory:
+
+```typescript
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
+import { Genre } from './Genre';
 
 @Entity()
 export class Movie {
@@ -1189,18 +1242,36 @@ export class Movie {
     id: number;
 
     @Column()
-    name: string;
+    title: string;
 
-    @Column()
-    isFavorite: boolean;
+    @ManyToOne(() => Genre, genre => genre.movies)
+    genre: Genre;
 }
 ```
 
-In this entity definition:
+Create a `Genre.ts` file inside the `entities` directory:
 
-- **@Entity**: Decorator that marks this class as an entity to be managed by TypeORM.
-- **@PrimaryGeneratedColumn**: Decorator that marks the `id` property as the primary key and auto-generates it.
-- **@Column**: Decorator that marks the properties as columns in the database.
+```typescript
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
+import { Movie } from './Movie';
+
+@Entity()
+export class Genre {
+    @PrimaryGeneratedColumn()
+    id: number;
+
+    @Column()
+    name: string;
+
+    @OneToMany(() => Movie, movie => movie.genre)
+    movies: Movie[];
+}
+```
+
+- **Many-to-One**: Each movie belongs to a single genre.
+- **One-to-Many**: A genre can have many movies.
+- **@ManyToOne**: Defines the many-to-one relationship.
+- **@OneToMany**: Defines the one-to-many relationship.
 
 #### Step 4: Define a DTO for Data Validation
 
@@ -1216,15 +1287,20 @@ export class MovieDto {
 
     @IsNotEmpty()
     @IsString()
-    name: string;
+    title: string;
+
+    @IsNotEmpty()
+    @IsNumber()
+    genreId: number;
 
     @IsNotEmpty()
     @IsBoolean()
     isFavorite: boolean;
 
-    constructor(id: number, name: string, isFavorite: boolean) {
+    constructor(id: number, title: string, genreId: number, isFavorite: boolean) {
         this.id = id;
-        this.name = name;
+        this.title = title;
+        this.genreId = genreId;
         this.isFavorite = isFavorite;
     }
 }
@@ -1265,126 +1341,261 @@ AppDataSource.initialize()
 
 Here, **AppDataSource.initialize()** initializes the TypeORM data source before starting the Express server.
 
----
+#### Step 6: Define Relationships in DTOs (Optional)
 
-## 6. Making an MVC Structure
-
-
-### 6. Making an MVC Structure
-
-In this step, we'll set up a basic MVC (Model-View-Controller) structure for your application using TypeORM with PostgreSQL. This includes creating a repository layer for database operations, a service layer for business logic, and a controller layer for handling HTTP requests. We’ll also show how to integrate these layers.
-
-#### Step 1: Define the MVC Structure
-
-Here’s how the MVC structure will be organized:
-
-- **Models**: Define the structure of your data (e.g., TypeORM entities).
-- **Views**: In a typical MVC application, views are the user interface components. In an API context, this layer is usually minimal or omitted since it primarily deals with JSON responses.
-- **Controllers**: Handle HTTP requests and interact with services.
-- **Services**: Contain business logic and interact with the repository layer.
-- **Repositories**: Perform database operations using TypeORM.
-
-#### Step 2: Create a Repository Layer
-
-Create a `repositories` directory inside your `src` directory. Inside `repositories`, create a file named `MovieRepository.ts`:
+If you want to include relationships in your DTOs, you can do something like this:
 
 ```typescript
-import { Repository, DataSource } from 'typeorm';
-import { Movie } from '../entities/Movie';
-import AppDataSource from '../ormconfig';
+import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
 
-export class MovieRepository extends Repository<Movie> {
-    constructor() {
-        super(Movie, AppDataSource.manager);
+export class GenreDto {
+    @IsNotEmpty()
+    @IsNumber()
+    id: number;
+
+    @IsNotEmpty()
+    @IsString()
+    name: string;
+
+    constructor(id: number, name: string) {
+        this.id = id;
+        this.name = name;
     }
+}
 
-    async addMovie(movie: Movie): Promise<Movie> {
-        return this.save(movie);
-    }
+export class MovieDto {
+    @IsNotEmpty()
+    @IsNumber()
+    id: number;
 
-    async getMovies(): Promise<Movie[]> {
-        return this.find();
-    }
+    @IsNotEmpty()
+    @IsString()
+    title: string;
 
-    async getMovieById(id: number): Promise<Movie | null> {
-        return this.findOneBy({ id });
-    }
+    @IsNotEmpty()
+    @IsNumber()
+    genreId: number;
 
-    async updateMovie(movie: Movie): Promise<Movie> {
-        await this.save(movie);
-        return movie;
-    }
+    @IsNotEmpty()
+    @IsString()
+    genreName: string;
 
-    async deleteMovie(id: number): Promise<void> {
-        await this.delete(id);
+    constructor(id: number, title: string, genreId: number, genreName: string) {
+        this.id = id;
+        this.title = title;
+        this.genreId = genreId;
+        this.genreName = genreName;
     }
 }
 ```
 
-In this repository:
 
-- **addMovie**: Adds a new movie to the database.
-- **getMovies**: Retrieves all movies.
-- **getMovieById**: Retrieves a movie by its ID.
-- **updateMovie**: Updates an existing movie.
-- **deleteMovie**: Deletes a movie by its ID.
+## 6. Making an MVC Structure
 
-#### Step 3: Create a Service Layer
+In this chapter, we'll establish the Model-View-Controller (MVC) structure for your application, focusing on the repository, service, and controller layers. Each layer has its responsibilities, and together they form the backbone of your application.
 
-Create a `services` directory inside your `src` directory. Inside `services`, create a file named `MovieService.ts`:
+#### Step 1: Repository Layer
+
+The repository layer interacts directly with the database, providing methods to retrieve, insert, update, and delete data. Here are examples of different approaches to querying the database using TypeORM's QueryBuilder, raw SQL, and manual database management with `pool.query`.
+
+##### 1. Using TypeORM’s QueryBuilder
+
+TypeORM’s QueryBuilder allows you to build complex SQL queries programmatically.
 
 ```typescript
-import { MovieRepository } from '../repositories/MovieRepository';
+import { AppDataSource } from '../ormconfig';
 import { Movie } from '../entities/Movie';
+
+export class MovieRepository {
+    async getTopRatedMovies(year: number): Promise<Movie[]> {
+        return await AppDataSource.getRepository(Movie)
+            .createQueryBuilder('movie')
+            .where('movie.rating > :rating', { rating: 8 })
+            .andWhere('movie.releaseYear = :year', { year })
+            .orderBy('movie.title', 'ASC')
+            .getMany();
+    }
+}
+```
+
+This method fetches movies with a rating greater than 8 that were released in a specific year.
+
+##### 2. Using Raw SQL with TypeORM
+
+You can execute raw SQL queries if you need more control over the query structure.
+
+```typescript
+import { AppDataSource } from '../ormconfig';
+
+export class MovieRepository {
+    async getMoviesWithRawSQL(rating: number, year: number): Promise<any[]> {
+        return await AppDataSource.query(
+            `SELECT * FROM movie WHERE rating > $1 AND release_year = $2 ORDER BY title ASC`,
+            [rating, year]
+        );
+    }
+}
+```
+
+This approach allows you to run custom SQL queries while still benefiting from TypeORM's connection management.
+
+##### 3. Using `pool.query` in Non-TypeORM Code
+
+Sometimes, you may want to manage the database connection directly, using `pool.query`.
+
+```typescript
+import { Pool } from 'pg';
+
+const pool = new Pool({
+    user: 'your-username',
+    host: 'localhost',
+    database: 'your-database',
+    password: 'your-password',
+    port: 5432,
+});
+
+export class MovieRepository {
+    async getMoviesDirectly(rating: number): Promise<any[]> {
+        const res = await pool.query('SELECT * FROM movie WHERE rating > $1', [rating]);
+        return res.rows;
+    }
+}
+```
+
+This method is typically used in projects that don't use an ORM or where more control over database interactions is needed.
+
+##### Repository Layer Request Examples
+
+1. **Getting All Movies:**
+
+```typescript
+async getAllMovies(): Promise<Movie[]> {
+    return await AppDataSource.getRepository(Movie).find();
+}
+```
+
+2. **Getting a Movie by ID:**
+
+```typescript
+async getMovieById(id: number): Promise<Movie | null> {
+    return await AppDataSource.getRepository(Movie).findOneBy({ id });
+}
+```
+
+3. **Getting Movies by Genre:**
+
+```typescript
+async getMoviesByGenre(genreId: number): Promise<Movie[]> {
+    return await AppDataSource.getRepository(Movie).findBy({ genre: { id: genreId } });
+}
+```
+
+4. **Getting Movies by Multiple Parameters:**
+
+```typescript
+async getMoviesByCriteria(rating: number, year: number): Promise<Movie[]> {
+    return await AppDataSource.getRepository(Movie)
+        .createQueryBuilder('movie')
+        .where('movie.rating > :rating', { rating })
+        .andWhere('movie.releaseYear = :year', { year })
+        .getMany();
+}
+```
+
+5. **Adding a Movie:**
+
+```typescript
+async addMovie(movie: Movie): Promise<Movie> {
+    return await AppDataSource.getRepository(Movie).save(movie);
+}
+```
+
+#### Step 2: Service Layer
+
+The service layer contains the business logic, such as validation, transaction management, and handling multiple repository interactions.
+
+##### Validation Handling
+
+```typescript
+import { validate } from 'class-validator';
 import { MovieDto } from '../dto/MovieDto';
+import { plainToInstance } from 'class-transformer';
+import { MovieRepository } from '../repositories/MovieRepository';
 
 export class MovieService {
     private movieRepository = new MovieRepository();
 
-    async addMovie(dto: MovieDto): Promise<Movie> {
-        const movie = new Movie();
-        movie.id = dto.id;
-        movie.name = dto.name;
-        movie.isFavorite = dto.isFavorite;
+    async addMovie(movieDto: MovieDto): Promise<MovieDto | null> {
+        const movieInstance = plainToInstance(MovieDto, movieDto);
+        const errors = await validate(movieInstance);
 
-        return this.movieRepository.addMovie(movie);
-    }
-
-    async getMovies(): Promise<Movie[]> {
-        return this.movieRepository.getMovies();
-    }
-
-    async getMovieById(id: number): Promise<Movie | null> {
-        return this.movieRepository.getMovieById(id);
-    }
-
-    async updateMovie(dto: MovieDto): Promise<Movie> {
-        const movie = await this.movieRepository.getMovieById(dto.id);
-        if (movie) {
-            movie.name = dto.name;
-            movie.isFavorite = dto.isFavorite;
-            return this.movieRepository.updateMovie(movie);
+        if (errors.length > 0) {
+            throw new Error('Validation failed');
         }
-        throw new Error('Movie not found');
-    }
 
-    async deleteMovie(id: number): Promise<void> {
-        await this.movieRepository.deleteMovie(id);
+        return await this.movieRepository.addMovie(movieInstance);
     }
 }
 ```
 
-In this service:
+##### Handling Parameters and Body in Requests
 
-- **addMovie**: Converts a DTO to an entity and adds it to the database.
-- **getMovies**: Retrieves all movies using the repository.
-- **getMovieById**: Retrieves a specific movie by its ID.
-- **updateMovie**: Updates an existing movie based on the DTO.
-- **deleteMovie**: Deletes a movie by its ID.
+```typescript
+async getMoviesByRatingAndYear(rating: number, year: number): Promise<Movie[]> {
+    return await this.movieRepository.getMoviesByCriteria(rating, year);
+}
+```
 
-#### Step 4: Create a Controller Layer
+##### Transactional and Non-Transactional Handling
 
-Update the `routes/moviesRouter.ts` file to use the service layer:
+- **Transactional Example (Multiple Repository Requests):**
+
+```typescript
+import { AppDataSource } from '../ormconfig';
+
+export class MovieService {
+    async updateMovieDetails(movieDto: MovieDto): Promise<void> {
+        await AppDataSource.transaction(async (transactionalEntityManager) => {
+            const movieRepository = transactionalEntityManager.getRepository(Movie);
+            const genreRepository = transactionalEntityManager.getRepository(Genre);
+
+            const genre = await genreRepository.findOneBy({ id: movieDto.genreId });
+            if (!genre) throw new Error('Genre not found');
+
+            const movie = await movieRepository.findOneBy({ id: movieDto.id });
+            if (!movie) throw new Error('Movie not found');
+
+            movie.title = movieDto.title;
+            movie.genre = genre;
+            await movieRepository.save(movie);
+        });
+    }
+}
+```
+
+- **Non-Transactional Example:**
+
+```typescript
+async addNewMovie(movieDto: MovieDto): Promise<MovieDto> {
+    return await this.movieRepository.addMovie(movieDto);
+}
+```
+
+##### Handling HTTP Response Codes
+
+```typescript
+async getMovie(id: number): Promise<Movie> {
+    const movie = await this.movieRepository.getMovieById(id);
+    if (!movie) {
+        throw new Error('Movie not found');
+    }
+    return movie;
+}
+```
+
+#### Step 3: Create a Controller Layer
+
+The controller layer handles HTTP requests, delegating work to the service layer, and sending responses back to the client. Here's how you can structure your controllers:
 
 ```typescript
 import express, { Request, Response, NextFunction } from 'express';
@@ -1455,17 +1666,15 @@ moviesRouter.delete('/:id', async (req: Request, res: Response, next: NextFuncti
 export default moviesRouter;
 ```
 
-- **GET `/`**: Retrieves all movies.
-- **POST `/add`**: Adds a new movie.
-- **GET `/:id`**: Retrieves a movie by ID.
-- **PUT `/update`**: Updates an existing movie.
-- **DELETE `/:id`**: Deletes a movie by ID.
+##### Explanation of Error Handling in Controllers
 
-#### Step 5: Testing the MVC Structure
+In each route handler, we wrap the logic inside a `try` block to catch any errors that might occur. The `catch` block calls `next(e)`, passing the error to the Express error-handling middleware. This approach ensures that all errors are handled consistently and that the application doesn't crash due to unhandled exceptions.
 
-Ensure that your application works correctly by running the server and testing the routes using a tool like Postman or cURL.
+If a specific error occurs (like a movie not being found), we can customize the response by returning the appropriate HTTP status code and message (e.g., 404 for "Not Found").
 
 ---
+
+This completes the MVC structure setup with repository, service, and controller layers, including error handling and various use cases.
 
 
 </details>
