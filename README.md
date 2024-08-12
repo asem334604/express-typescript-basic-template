@@ -1879,17 +1879,110 @@ If your configuration is correct, you should see a message in the console indica
 
 ## 4. Basic Route Creation
 
+In this step, we’ll create basic routes for handling HTTP requests using Express.js, specifically tailored for MongoDB. We’ll cover how to set up GET, POST, and parameterized routes, as well as how to handle query parameters.
+
 ### Step 1: Creating the Movies Router
 
-1. **Example: GET Route**
+Create a new directory named `routes` inside your `src` directory. Inside `routes`, create a file named `moviesRouter.ts`:
 
-2. **Example: POST Route**
+```typescript
+import express, { Request, Response, NextFunction } from 'express';
+import Movie from '../models/movieModel'; // Assuming you have a Mongoose model defined
 
-3. **Example: Route with Parameter**
+const moviesRouter = express.Router();
+
+// Example: GET Route
+moviesRouter.get('/', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const query = req.query.q as string;
+
+        if (!query) {
+            res.status(400).send('Query parameter "q" is required');
+            return;
+        }
+
+        // Fetch movies based on the query
+        const movies = await Movie.find({ title: new RegExp(query, 'i') });
+
+        res.json(movies);
+    } catch (e) {
+        next(e);
+    }
+});
+
+// Example: POST Route
+moviesRouter.post('/add', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { title, genre } = req.body;
+
+        if (!title || !genre) {
+            res.status(400).send('Title and Genre are required');
+            return;
+        }
+
+        const newMovie = new Movie({ title, genre });
+        await newMovie.save();
+
+        res.status(201).json({ message: 'Movie added successfully', movie: newMovie });
+    } catch (e) {
+        next(e);
+    }
+});
+
+// Example: Route with Parameter
+moviesRouter.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { id } = req.params;
+
+        // Fetch a movie by ID
+        const movie = await Movie.findById(id);
+
+        if (!movie) {
+            res.status(404).send('Movie not found');
+            return;
+        }
+
+        res.json(movie);
+    } catch (e) {
+        next(e);
+    }
+});
+
+export default moviesRouter;
+```
+
+- **GET Route**: Handles requests to `/movies` and optionally accepts a query parameter `q`. If `q` is provided, it returns a list of movies whose titles match the query using a case-insensitive regular expression.
+- **POST Route**: Handles requests to `/movies/add`. It expects a movie object in the request body and adds it to the MongoDB collection.
+- **Parameterized Route**: Handles requests to `/movies/:id`, where `:id` is a dynamic parameter representing a movie’s ID. It fetches the movie from the MongoDB collection by its ID.
 
 ### Step 2: Example Client-Side Integration
 
+For the POST route `/movies/add`, here’s how you might integrate it on the client side:
+
+```typescript
+const handleAddFavoriteMovie = async (movie: { title: string; genre: string }) => {
+    const response = await fetch(`http://localhost:3000/movies/add`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(movie),
+    });
+
+    if (response.ok) {
+        console.log('Movie added successfully!');
+    } else {
+        console.error('Failed to add movie.');
+    }
+};
+```
+
+This function sends a POST request to the `/movies/add` endpoint to add a new movie. The movie object should include `title` and `genre` as properties.
+
 ---
+
+This section outlines the creation of basic routes for handling movies in your MongoDB database using Express.js.
+
 
 ## 5. Setting Configuration for Mongoose
 
