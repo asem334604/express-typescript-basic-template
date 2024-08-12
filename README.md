@@ -1880,9 +1880,6 @@ npx ts-node src/testDbConnection.ts
 
 If your configuration is correct, you should see a message in the console indicating that the database is connected, along with the MongoDB server version.
 
-```
-
-This section provides a complete guide for setting up MongoDB with Mongoose, including how to configure the database connection, use it in your application, and test the configuration.
 
 
 
