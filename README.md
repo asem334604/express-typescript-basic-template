@@ -1792,13 +1792,99 @@ This updated guide focuses on using the in-memory MongoDB to test service method
 
 ## 3. Basic MongoDB Configuration
 
-### Step 1: Create a MongoDB Connection Configuration
+In this step, we'll configure the connection to a MongoDB database using the Mongoose library. This configuration will allow your application to connect to the MongoDB database and perform various operations such as querying, inserting, updating, and deleting data.
+
+### Step 1: Create a Database Configuration File
+
+Create a new directory named `config` inside your `src` directory. Inside `config`, create a file named `db.ts` to hold your database configuration:
+
+```typescript
+// src/config/db.ts
+import mongoose from 'mongoose';
+
+// Create a new connection string for MongoDB
+const dbUri = 'mongodb://localhost:27017/mydb'; // Connection URI
+
+// Connect to MongoDB using Mongoose
+const connectToDatabase = async () => {
+    try {
+        await mongoose.connect(dbUri, {
+            useNewUrlParser: true,
+            useUnifiedTopology: true,
+        });
+        console.log('Connected to MongoDB');
+    } catch (error) {
+        console.error('Database connection error:', error);
+    }
+};
+
+// Export the connection function
+export default connectToDatabase;
+```
+
+- **dbUri**: The connection URI for your MongoDB server. `localhost:27017` is the default for a local MongoDB instance.
+- **connectToDatabase**: This function connects to the MongoDB server using Mongoose and logs the connection status.
 
 ### Step 2: Use the Database Configuration in Your Application
 
+To use this configuration in other parts of your application, simply call the `connectToDatabase` function wherever you need to interact with the database.
+
+For example, in a service or application startup file:
+
+```typescript
+// src/app.ts
+import connectToDatabase from './config/db';
+
+const startServer = async () => {
+    await connectToDatabase();
+    
+    // Your application code here
+};
+
+startServer();
+```
+
+Here, the `connectToDatabase` function establishes a connection to MongoDB before starting the application server.
+
 ### Step 3: Test the Configuration
 
----
+To ensure your configuration is working correctly, you can create a simple script to connect to the database and perform a basic query.
+
+Create a file `src/testDbConnection.ts`:
+
+```typescript
+import mongoose from 'mongoose';
+import connectToDatabase from './config/db';
+
+const testConnection = async () => {
+    await connectToDatabase();
+
+    try {
+        const result = await mongoose.connection.db.admin().serverStatus();
+        console.log('Database connected:', result.version);
+    } catch (error) {
+        console.error('Database connection error:', error);
+    } finally {
+        await mongoose.disconnect();
+    }
+};
+
+testConnection();
+```
+
+Run this script using ts-node to test the connection:
+
+```bash
+npx ts-node src/testDbConnection.ts
+```
+
+If your configuration is correct, you should see a message in the console indicating that the database is connected, along with the MongoDB server version.
+
+```
+
+This section provides a complete guide for setting up MongoDB with Mongoose, including how to configure the database connection, use it in your application, and test the configuration.
+
+
 
 ## 4. Basic Route Creation
 
