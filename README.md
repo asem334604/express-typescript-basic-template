@@ -1631,7 +1631,7 @@ This completes the MVC structure setup with repository, service, and controller 
   - [3. Basic MongoDB Configuration](#3-basic-mongodb-configuration)
   - [4. Basic Route Creation](#4-basic-route-creation)
   - [5. Setting Up Mongoose Models and Schemas with Validation](#5-setting-up-mongoose-models-and-schemas-with-validation)
-  - [6. Making an MVC Structure](#6-making-an-mvc-structure)
+  - [6. Setting Up an MVC Structure with Mongoose and MongoDB](#6-setting-up-an-mvc-structure-with-mongoose-and-mongodb)
 
 ---
 
@@ -2120,29 +2120,295 @@ In this example, the `title` field must be longer than 3 characters.
 ---
 
 
-## 6. Making an MVC Structure
+## 6. Setting Up an MVC Structure with Mongoose and MongoDB
 
-### Step 1: Repository Layer
 
-1. **Using Mongoose’s Query Methods**
+In this chapter, we’ll establish the Model-View-Controller (MVC) structure for your application, focusing on the repository, service, and controller layers. Each layer has its own responsibilities, and together they form the backbone of your application.
 
-2. **Using Aggregation Pipelines**
+## Step 1: Repository Layer
 
-### Step 2: Service Layer
+The repository layer interacts directly with the MongoDB database, providing methods to retrieve, insert, update, and delete data. This section covers different approaches to querying the database using Mongoose.
 
-1. **Validation Handling**
+### Example: Movie Repository Class
 
-2. **Handling Parameters and Body
+```typescript
+import { Movie } from '../models/Movie';
+import { MovieDto } from '../dto/MovieDto';
 
- in Requests**
+export class MovieRepository {
+    async getAllMovies(): Promise<Movie[]> {
+        return await Movie.find();
+    }
 
-3. **Transactional and Non-Transactional Handling**
+    async getMovieById(id: string): Promise<Movie | null> {
+        return await Movie.findById(id);
+    }
 
-4. **Handling HTTP Response Codes**
+    async getMoviesByGenre(genreId: string): Promise<Movie[]> {
+        return await Movie.find({ genreId });
+    }
 
-### Step 3: Create a Controller Layer
+    async addMovie(movieDto: MovieDto): Promise<Movie> {
+        const movie = new Movie(movieDto);
+        return await movie.save();
+    }
 
-1. **Explanation of Error Handling in Controllers**
+    async updateMovie(id: string, movieDto: Partial<MovieDto>): Promise<Movie | null> {
+        return await Movie.findByIdAndUpdate(id, movieDto, { new: true });
+    }
+
+    async deleteMovie(id: string): Promise<void> {
+        await Movie.findByIdAndDelete(id);
+    }
+}
+```
+
+### Explanation:
+
+- **getAllMovies**: Retrieves all movies from the database.
+- **getMovieById**: Fetches a specific movie by its ID.
+- **getMoviesByGenre**: Retrieves movies filtered by genre ID.
+- **addMovie**: Adds a new movie to the database.
+- **updateMovie**: Updates an existing movie’s details.
+- **deleteMovie**: Deletes a movie from the database.
+
+### Partial Type in TypeScript
+
+The `Partial<T>` type in TypeScript allows you to create a type with all properties of `T` set to optional. This is particularly useful when updating an entity, as you may not want to update every field.
+
+## Step 2: Service Layer
+
+The service layer contains the business logic, such as validation, transaction management, handling multiple repository interactions, and throwing custom errors.
+
+### Custom Error Handling
+
+Creating custom errors allows for more specific error handling across the service and controller layers.
+
+#### Example: Custom Error Classes
+
+```typescript
+class NotFoundError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'NotFoundError';
+    }
+}
+
+class ValidationError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'ValidationError';
+    }
+}
+```
+
+### Validation Handling
+
+Before saving data to MongoDB, we validate the incoming data using `class-validator` within the service layer.
+
+```typescript
+import { validate } from 'class-validator';
+import { MovieDto } from '../dto/MovieDto';
+import { plainToInstance } from 'class-transformer';
+import { MovieRepository } from '../repositories/MovieRepository';
+import { ValidationError } from '../errors/CustomErrors';
+
+export class MovieService {
+    private movieRepository = new MovieRepository();
+
+    async addMovie(movieDto: MovieDto): Promise<MovieDto | null> {
+        const movieInstance = plainToInstance(MovieDto, movieDto);
+        const errors = await validate(movieInstance);
+
+        if (errors.length > 0) {
+            throw new ValidationError('Validation failed');
+        }
+
+        return await this.movieRepository.addMovie(movieInstance);
+    }
+}
+```
+
+### Handling Parameters and Body in Requests
+
+We can handle different query parameters and request bodies in the service methods.
+
+```typescript
+async getMoviesByRatingAndYear(rating: number, year: number): Promise<Movie[]> {
+    return await this.movieRepository.getMoviesByCriteria(rating, year);
+}
+```
+
+### Transactional and Non-Transactional Handling
+
+MongoDB supports transactions in replica set environments, allowing you to perform multiple operations atomically.
+
+#### Example: Transactional Update of Movie Details
+
+```typescript
+import { startSession } from 'mongoose';
+import { NotFoundError } from '../errors/CustomErrors';
+
+export class MovieService {
+    async updateMovieDetails(movieDto: MovieDto): Promise<void> {
+        const session = await startSession();
+        session.startTransaction();
+
+        try {
+            const movie = await this.movieRepository.updateMovie(movieDto.id, movieDto);
+            if (!movie) throw new NotFoundError('Movie not found');
+
+            await session.commitTransaction();
+        } catch (error) {
+            await session.abortTransaction();
+            throw error;
+        } finally {
+            session.endSession();
+        }
+    }
+}
+```
+
+#### Example: Non-Transactional Add Movie
+
+```typescript
+export class MovieService {
+    async addNewMovie(movieDto: MovieDto): Promise<Movie> {
+        return await this.movieRepository.addMovie(movieDto);
+    }
+}
+```
+
+### Handling HTTP Response Codes
+
+The service layer can handle various HTTP response codes depending on the outcome of the business logic by throwing appropriate custom errors.
+
+#### Example: Handling Different Response Scenarios
+
+```typescript
+export class MovieService {
+    private movieRepository = new MovieRepository();
+
+    async getMovie(id: string): Promise<Movie> {
+        const movie = await this.movieRepository.getMovieById(id);
+        if (!movie) {
+            throw new NotFoundError('Movie not found');
+        }
+        return movie;
+    }
+
+    async updateMovie(movieDto: MovieDto): Promise<Movie> {
+        const movie = await this.movieRepository.updateMovie(movieDto.id, movieDto);
+        if (!movie) {
+            throw new NotFoundError('Movie not found');
+        }
+        return movie;
+    }
+
+    async deleteMovie(id: string): Promise<void> {
+        const movie = await this.movieRepository.getMovieById(id);
+        if (!movie) {
+            throw new NotFoundError('Movie not found');
+        }
+        await this.movieRepository.deleteMovie(id);
+    }
+}
+```
+
+## Step 3: Create a Controller Layer
+
+The controller layer handles HTTP requests, delegating work to the service layer, and sending responses back to the client, including appropriate HTTP status codes.
+
+#### Example: Movie Controller
+
+```typescript
+import express, { Request, Response, NextFunction } from 'express';
+import { MovieService } from '../services/MovieService';
+import { MovieDto } from '../dto/MovieDto';
+import { NotFoundError, ValidationError } from '../errors/CustomErrors';
+
+const moviesRouter = express.Router();
+const movieService = new MovieService();
+
+// GET Route
+moviesRouter.get('/', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const movies = await movieService.getMovies();
+        res.json(movies);
+    } catch (e) {
+        next(e);
+    }
+});
+
+// POST Route
+moviesRouter.post('/add', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const dto = req.body as MovieDto;
+        const movie = await movieService.addMovie(dto);
+        res.status(201).json(movie);
+    } catch (e) {
+        if (e instanceof ValidationError) {
+            res.status(400).json({ error: e.message });
+        } else {
+            next(e);
+        }
+    }
+});
+
+// GET Route with Parameter
+moviesRouter.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const id = req.params.id;
+        const movie = await movieService.getMovie(id);
+        res.json(movie);
+    } catch (e) {
+        if (e instanceof NotFoundError) {
+            res.status(404).json({ error: e.message });
+        } else {
+            next(e);
+        }
+    }
+});
+
+// PUT Route
+moviesRouter.put('/update', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const dto = req.body as MovieDto;
+        const movie = await movieService.updateMovie(dto);
+        res.json(movie);
+    } catch (e) {
+        if (e instanceof NotFoundError) {
+            res.status(404).json({ error: e.message });
+        } else if (e instanceof ValidationError) {
+            res.status(400).json({ error: e.message });
+        } else {
+            next(e);
+        }
+    }
+});
+
+// DELETE Route
+moviesRouter.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const id = req.params.id;
+        await movieService.deleteMovie(id);
+        res.status(204).send();
+    } catch (e) {
+        if (e instanceof NotFoundError) {
+            res.status(404).json({ error: e.message });
+        } else {
+            next(e);
+        }
+    }
+});
+
+export default moviesRouter;
+```
+
+### Explanation of Error Handling in Controllers
+
+In each route handler, the logic is wrapped in a `try` block to catch any errors. Depending on the error type, the controller sends the appropriate HTTP status code. If the error is a known custom error, like `NotFoundError` or `ValidationError`, a specific response is sent; otherwise, the error is passed to the next middleware for further handling.
+
 
 </details>
 
