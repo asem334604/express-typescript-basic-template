@@ -1875,7 +1875,7 @@ npx ts-node src/testDbConnection.ts
 
 If your configuration is correct, you should see a message in the console indicating that the database is connected, along with the MongoDB server version.
 
----
+
 
 ## 4. Basic Route Creation
 
