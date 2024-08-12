@@ -1629,7 +1629,7 @@ This completes the MVC structure setup with repository, service, and controller 
   - [1. Installing Required Packages](#1-installing-required-packages)
   - [2. Setting Up In-Memory MongoDB for Unit and Integration Testing](#2-setting-up-in-memory-mongodb-for-unit-and-integration-testing)
   - [3. Basic MongoDB Configuration](#3-basic-mongodb-configuration)
-  - [4. Basic Route Creation](#4-basic-route-creation)
+  - [4. Basic MongoDB Route Creation](#4-basic-mongodb-route-creation)
   - [5. Setting Up Mongoose Models and Schemas with Validation](#5-setting-up-mongoose-models-and-schemas-with-validation)
   - [6. Setting Up an MVC Structure with Mongoose and MongoDB](#6-setting-up-an-mvc-structure-with-mongoose-and-mongodb)
 
@@ -1877,7 +1877,7 @@ If your configuration is correct, you should see a message in the console indica
 
 
 
-## 4. Basic Route Creation
+## 4. Basic MongoDB Route Creation
 
 In this step, we’ll create basic routes for handling HTTP requests using Express.js, specifically tailored for MongoDB. We’ll cover how to set up GET, POST, and parameterized routes, as well as how to handle query parameters.
 
