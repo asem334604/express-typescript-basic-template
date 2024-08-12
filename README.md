@@ -1979,8 +1979,6 @@ const handleAddFavoriteMovie = async (movie: { title: string; genre: string }) =
 
 This function sends a POST request to the `/movies/add` endpoint to add a new movie. The movie object should include `title` and `genre` as properties.
 
----
-
 This section outlines the creation of basic routes for handling movies in your MongoDB database using Express.js.
 
 
