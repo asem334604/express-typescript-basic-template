@@ -1637,25 +1637,158 @@ This completes the MVC structure setup with repository, service, and controller 
 
 ## 1. Installing Required Packages
 
+
 ### Step 1: Initialize a New Node.js Project
 
+If you haven’t already, initialize your Node.js project:
+
+```bash
+npm init -y
+```
+
 ### Step 2: Install Required Packages
+
+For MongoDB, you'll need to install `mongoose` as the ODM (Object Data Modeling) library. Mongoose provides a straightforward way to interact with MongoDB and manage data schemas. Install Mongoose with:
+
+```bash
+npm install mongoose
+```
+
+Additionally, install `mongodb-memory-server` for in-memory testing, which is useful for creating a temporary MongoDB instance during unit and integration tests:
+
+```bash
+npm install -D mongodb-memory-server
+```
+
+For testing, you should install Jest and its TypeScript types to facilitate running and writing tests:
+
+```bash
+npm install -D jest @types/jest ts-jest
+```
+
+If you are using TypeScript, configure Jest to work with TypeScript by adding a Jest configuration file:
+
+```bash
+npx ts-jest config:init
+```
+
+This setup includes Mongoose for data modeling, `mongodb-memory-server` for testing, and Jest for running and writing tests, along with necessary TypeScript types to integrate Jest smoothly into your TypeScript project.
+```
+
+This version includes Jest and TypeScript types for comprehensive testing support, alongside MongoDB-specific packages.
 
 ---
 
 ## 2. Setting Up In-Memory MongoDB for Unit and Integration Testing
 
+In this step, we will set up `mongodb-memory-server` to create an in-memory MongoDB instance for running unit and integration tests. This setup allows you to test your service methods while using an in-memory MongoDB to mock the database interactions.
+
 ### Step 1: Import Required Modules
+
+Create a new file in your `src` directory named `testDb.ts` (or a similar name). Import the necessary modules:
+
+```typescript
+import { MongoMemoryServer } from 'mongodb-memory-server';
+import mongoose from 'mongoose';
+```
+
+- **MongoMemoryServer**: A class provided by `mongodb-memory-server` to create and manage an in-memory MongoDB server.
+- **mongoose**: The Mongoose library, which provides a straightforward API for interacting with MongoDB.
 
 ### Step 2: Set Up the Mock Database
 
-### Step 3: Example Test for a Mongoose Model
+Create functions to start the in-memory MongoDB server and connect to it. This will allow you to run tests against a temporary MongoDB instance:
 
-1. **Create a Sample Model:**
+```typescript
+let mongoServer: MongoMemoryServer;
 
-2. **Write a Test Case:**
+export const connect = async () => {
+    mongoServer = await MongoMemoryServer.create();
+    await mongoose.connect(mongoServer.getUri(), {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+    });
+};
 
----
+export const closeDatabase = async () => {
+    await mongoose.connection.dropDatabase();
+    await mongoose.connection.close();
+    await mongoServer.stop();
+};
+```
+
+- **mongoServer**: This is your in-memory MongoDB instance.
+- **connect**: This function sets up the connection between the in-memory database and Mongoose.
+- **closeDatabase**: This function cleans up the in-memory database and closes the connection.
+
+### Step 3: Example Test for a Service Method
+
+Let's use your written service methods and mock the storage layer using the in-memory MongoDB. 
+
+1. **Create a Sample Service:**
+
+   Assume you have a service method that interacts with the MongoDB database. For example, in `movieService.ts`:
+
+   ```typescript
+   import Movie from './movieModel';
+
+   export class MovieService {
+       async addMovie(title: string, genre: string): Promise<void> {
+           const movie = new Movie({ title, genre });
+           await movie.save();
+       }
+
+       async getMovieByTitle(title: string) {
+           return await Movie.findOne({ title });
+       }
+   }
+   ```
+
+2. **Write a Test Case Using Jest:**
+
+   Create a test file, for example, `movieService.test.ts`, and write a test case:
+
+   ```typescript
+   import { connect, closeDatabase } from './testDb';
+   import { MovieService } from './movieService';
+
+   let movieService: MovieService;
+
+   beforeAll(async () => {
+       await connect();
+       movieService = new MovieService();
+       await mongoose.connection.db.createCollection('movies');
+   });
+
+   afterAll(async () => await closeDatabase());
+
+   describe('MovieService Test', () => {
+       it('should add and retrieve a movie successfully', async () => {
+           await movieService.addMovie('Inception', 'Sci-Fi');
+           const movie = await movieService.getMovieByTitle('Inception');
+           expect(movie).toBeDefined();
+           expect(movie?.title).toBe('Inception');
+           expect(movie?.genre).toBe('Sci-Fi');
+       });
+   });
+   ```
+
+   - **beforeAll**: Initializes the in-memory database and the service instance before running any tests. It also ensures the movies collection is created.
+   - **afterAll**: Closes the database connection and stops the in-memory MongoDB server after all tests have run.
+   - **it**: Tests the `MovieService` methods to ensure they correctly interact with the in-memory database.
+
+### Step 4: Run the Tests with Jest
+
+Finally, run your tests to ensure everything works correctly. If you have Jest installed, you can run:
+
+```bash
+npx jest
+```
+
+Jest will automatically find and run all test files in your project that match the pattern `*.test.ts`.
+```
+
+This updated guide focuses on using the in-memory MongoDB to test service methods while mocking the database interactions. It demonstrates how to set up, use, and test your service methods with an in-memory database.
 
 ## 3. Basic MongoDB Configuration
 
