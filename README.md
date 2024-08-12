@@ -1620,3 +1620,98 @@ This completes the MVC structure setup with repository, service, and controller 
 
 </details>
 
+
+<details>
+  <summary><strong>Setting Up Backend Structure (MVC) for MongoDB Database (click to expand)</strong></summary>
+
+  ## Navigation
+
+  - [1. Installing Required Packages](#1-installing-required-packages)
+  - [2. Setting Up In-Memory MongoDB for Unit and Integration Testing](#2-setting-up-in-memory-mongodb-for-unit-and-integration-testing)
+  - [3. Basic MongoDB Configuration](#3-basic-mongodb-configuration)
+  - [4. Basic Route Creation](#4-basic-route-creation)
+  - [5. Setting Configuration for Mongoose](#5-setting-configuration-for-mongoose)
+  - [6. Making an MVC Structure](#6-making-an-mvc-structure)
+
+---
+
+## 1. Installing Required Packages
+
+### Step 1: Initialize a New Node.js Project
+
+### Step 2: Install Required Packages
+
+---
+
+## 2. Setting Up In-Memory MongoDB for Unit and Integration Testing
+
+### Step 1: Import Required Modules
+
+### Step 2: Set Up the Mock Database
+
+### Step 3: Example Test for a Mongoose Model
+
+1. **Create a Sample Model:**
+
+2. **Write a Test Case:**
+
+---
+
+## 3. Basic MongoDB Configuration
+
+### Step 1: Create a MongoDB Connection Configuration
+
+### Step 2: Use the Database Configuration in Your Application
+
+### Step 3: Test the Configuration
+
+---
+
+## 4. Basic Route Creation
+
+### Step 1: Creating the Movies Router
+
+1. **Example: GET Route**
+
+2. **Example: POST Route**
+
+3. **Example: Route with Parameter**
+
+### Step 2: Example Client-Side Integration
+
+---
+
+## 5. Setting Configuration for Mongoose
+
+### Step 1: Install Mongoose and Required Packages
+
+### Step 2: Define Schemas and Models
+
+### Step 3: Integrate Mongoose into Your Application
+
+---
+
+## 6. Making an MVC Structure
+
+### Step 1: Repository Layer
+
+1. **Using Mongoose’s Query Methods**
+
+2. **Using Aggregation Pipelines**
+
+### Step 2: Service Layer
+
+1. **Validation Handling**
+
+2. **Handling Parameters and Body in Requests**
+
+3. **Transactional and Non-Transactional Handling**
+
+4. **Handling HTTP Response Codes**
+
+### Step 3: Create a Controller Layer
+
+1. **Explanation of Error Handling in Controllers**
+
+</details>
+
