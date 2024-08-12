@@ -1630,7 +1630,7 @@ This completes the MVC structure setup with repository, service, and controller 
   - [2. Setting Up In-Memory MongoDB for Unit and Integration Testing](#2-setting-up-in-memory-mongodb-for-unit-and-integration-testing)
   - [3. Basic MongoDB Configuration](#3-basic-mongodb-configuration)
   - [4. Basic Route Creation](#4-basic-route-creation)
-  - [5. Setting Configuration for Mongoose](#5-setting-configuration-for-mongoose)
+  - [5. Setting Up Mongoose Models and Schemas with Validation](#5-setting-up-mongoose-models-and-schemas-with-validation)
   - [6. Making an MVC Structure](#6-making-an-mvc-structure)
 
 ---
@@ -1982,15 +1982,143 @@ This function sends a POST request to the `/movies/add` endpoint to add a new mo
 This section outlines the creation of basic routes for handling movies in your MongoDB database using Express.js.
 
 
-## 5. Setting Configuration for Mongoose
+## 5. Setting Up Mongoose Models and Schemas with Validation
 
-### Step 1: Install Mongoose and Required Packages
 
-### Step 2: Define Schemas and Models
+In this step, we'll configure Mongoose models, use DTOs (Data Transfer Objects) for validation, and set up a basic repository layer. We'll ensure that the Mongoose schema integrates validation using `class-validator` and handle MongoDB operations within the repository.
 
-### Step 3: Integrate Mongoose into Your Application
+### Step 1: Define the Movie DTO with Validation
+
+First, create a DTO (Data Transfer Object) for the Movie entity using `class-validator`. This DTO will handle validation logic before the data is saved to MongoDB.
+
+```typescript
+import { IsBoolean, IsNotEmpty, IsString } from 'class-validator';
+import { Document } from 'mongoose';
+
+export class MovieDto extends Document {
+    @IsNotEmpty()
+    @IsString()
+    title: string;
+
+    @IsNotEmpty()
+    @IsString()
+    genreId: string;
+
+    @IsNotEmpty()
+    @IsBoolean()
+    isFavorite: boolean;
+
+    constructor(title: string, genreId: string, isFavorite: boolean) {
+        super();
+        this.title = title;
+        this.genreId = genreId;
+        this.isFavorite = isFavorite;
+    }
+}
+```
+
+In this DTO:
+
+- `@IsNotEmpty()` ensures the field is not empty.
+- `@IsString()` validates that the field is a string.
+- `@IsBoolean()` ensures the field is a boolean.
+
+### Step 2: Create Mongoose Schemas
+
+Next, define the Mongoose schema for the Movie entity. This schema will be connected with the `MovieDto` class to ensure that the data meets the defined structure and validation rules.
+
+```typescript
+import { Schema, model } from 'mongoose';
+import { MovieDto } from './dto/MovieDto';
+
+const MovieSchema = new Schema<MovieDto>({
+    title: { type: String, required: true },
+    genreId: { type: Schema.Types.ObjectId, ref: 'Genre', required: true },
+    isFavorite: { type: Boolean, required: true },
+});
+
+export const Movie = model<MovieDto>('Movie', MovieSchema);
+```
+
+In this schema:
+
+- `title` and `genreId` are string fields with the `required` property to ensure that these fields are always present.
+- `genreId` is a reference to another collection (`Genre`), showcasing a relationship.
+
+### Step 3: Understanding Mongoose Schema Options
+
+Mongoose provides various schema options that allow you to define your data model's structure and constraints more effectively. Here are some important options:
+
+#### 1. **Data Types**
+
+Mongoose supports various data types, including:
+
+- **String**: Represents textual data.
+- **Number**: Represents numerical data.
+- **Boolean**: Represents true/false values.
+- **Date**: Represents date and time.
+- **Buffer**: Represents binary data.
+- **ObjectId**: A special type used to reference other documents (i.e., foreign keys).
+- **Array**: Represents an array of sub-documents or any other type.
+
+#### 2. **Schema Options**
+
+When defining schemas, Mongoose allows you to use a wide range of options:
+
+- **required**: Ensures that a field is required.
+- **default**: Provides a default value if none is supplied.
+- **unique**: Ensures that each value for this field is unique across the collection.
+- **enum**: Restricts the value of a field to a specific set of values.
+- **min/max**: Sets the minimum and maximum values for numbers.
+- **minLength/maxLength**: Sets the minimum and maximum length for strings.
+- **index**: Creates an index on the field for faster queries.
+
+Example of a more complex schema:
+
+```typescript
+const GenreSchema = new Schema({
+    name: { type: String, required: true, unique: true },
+    description: { type: String, default: 'No description provided' },
+    createdAt: { type: Date, default: Date.now },
+});
+```
+
+#### 3. **Relationships and References**
+
+- **ref**: Used to define relationships between documents. It tells Mongoose which model to reference when populating the field.
+  
+  ```typescript
+  const MovieSchema = new Schema({
+      title: { type: String, required: true },
+      genre: { type: Schema.Types.ObjectId, ref: 'Genre', required: true },
+  });
+  ```
+
+- **populate()**: A method that can be used to automatically replace the specified paths in the document with documents from other collections.
+
+#### 4. **Custom Validation**
+
+Mongoose allows you to create custom validation logic directly in the schema definition:
+
+```typescript
+const MovieSchema = new Schema({
+    title: { 
+        type: String, 
+        required: true, 
+        validate: {
+            validator: function(v: string) {
+                return v.length > 3;
+            },
+            message: props => `${props.value} is too short!`
+        }
+    },
+});
+```
+
+In this example, the `title` field must be longer than 3 characters.
 
 ---
+
 
 ## 6. Making an MVC Structure
 
