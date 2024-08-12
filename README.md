@@ -1637,7 +1637,6 @@ This completes the MVC structure setup with repository, service, and controller 
 
 ## 1. Installing Required Packages
 
-
 ### Step 1: Initialize a New Node.js Project
 
 If you haven’t already, initialize your Node.js project:
@@ -1673,9 +1672,6 @@ npx ts-jest config:init
 ```
 
 This setup includes Mongoose for data modeling, `mongodb-memory-server` for testing, and Jest for running and writing tests, along with necessary TypeScript types to integrate Jest smoothly into your TypeScript project.
-```
-
-This version includes Jest and TypeScript types for comprehensive testing support, alongside MongoDB-specific packages.
 
 ---
 
@@ -1723,7 +1719,7 @@ export const closeDatabase = async () => {
 
 ### Step 3: Example Test for a Service Method
 
-Let's use your written service methods and mock the storage layer using the in-memory MongoDB. 
+Let's use your written service methods and mock the storage layer using the in-memory MongoDB.
 
 1. **Create a Sample Service:**
 
@@ -1786,9 +1782,8 @@ npx jest
 ```
 
 Jest will automatically find and run all test files in your project that match the pattern `*.test.ts`.
-```
 
-This updated guide focuses on using the in-memory MongoDB to test service methods while mocking the database interactions. It demonstrates how to set up, use, and test your service methods with an in-memory database.
+---
 
 ## 3. Basic MongoDB Configuration
 
@@ -1880,8 +1875,7 @@ npx ts-node src/testDbConnection.ts
 
 If your configuration is correct, you should see a message in the console indicating that the database is connected, along with the MongoDB server version.
 
-
-
+---
 
 ## 4. Basic Route Creation
 
@@ -1919,7 +1913,9 @@ If your configuration is correct, you should see a message in the console indica
 
 1. **Validation Handling**
 
-2. **Handling Parameters and Body in Requests**
+2. **Handling Parameters and Body
+
+ in Requests**
 
 3. **Transactional and Non-Transactional Handling**
 
