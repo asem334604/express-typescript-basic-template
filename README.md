@@ -2428,9 +2428,7 @@ In each route handler, the logic is wrapped in a `try` block to catch any errors
   - [Unique Visits Counting](#unique-visits-counting)
 
 
-Here’s the revised **Basic Commands** section with more detailed code examples that include all arguments and syntax:
 
-```markdown
 #### Basic Commands
 
 Redis provides a set of basic commands for interacting with key-value pairs. These commands are foundational and are frequently used in various operations.
