@@ -2394,3 +2394,89 @@ In each route handler, the logic is wrapped in a `try` block to catch any errors
 
 </details>
 
+
+
+<details>
+  <summary><strong>Redis Functionality Overview and Usage (click to expand)</strong></summary>
+
+## Navigation
+- [Available Methods](#available-methods)
+  - [Basic Commands](#basic-commands)
+  - [Working with Sets](#working-with-sets)
+  - [Working with Lists](#working-with-lists)
+  - [Working with Ordered Lists (Sorted Sets)](#working-with-ordered-lists-sorted-sets)
+  - [Working with Objects as Values (Hashes)](#working-with-objects-as-values-hashes)
+  - [Working with Geospatial Data](#working-with-geospatial-data)
+  - [Pub/Sub (Publish/Subscribe Messaging)](#pubsub-publishsubscribe-messaging)
+  - [Transactions and Pipelining](#transactions-and-pipelining)
+  - [Stream Data Type](#stream-data-type)
+  - [HyperLogLog](#hyperloglog)
+  - [Bitmaps](#bitmaps)
+  - [Persistence Options](#persistence-options)
+- [Use Cases](#use-cases)
+  - [Caching with Redis](#caching-with-redis)
+  - [Session Management with Redis](#session-management-with-redis)
+  - [Delivery Service with Geospatial Data](#delivery-service-with-geospatial-data)
+  - [Time-Dependent Attempt Limits](#time-dependent-attempt-limits)
+  - [Daily Quota Management](#daily-quota-management)
+  - [Ranking Items](#ranking-items)
+  - [Calculating Average Ratings](#calculating-average-ratings)
+  - [Real-Time Rating Updates](#real-time-rating-updates)
+  - [Site Visits Metadata](#site-visits-metadata)
+  - [Site Scrolling Metadata](#site-scrolling-metadata)
+  - [Site Duration Metadata](#site-duration-metadata)
+  - [Unique Visits Counting](#unique-visits-counting)
+
+
+Here’s the revised **Basic Commands** section with more detailed code examples that include all arguments and syntax:
+
+```markdown
+#### Basic Commands
+
+Redis provides a set of basic commands for interacting with key-value pairs. These commands are foundational and are frequently used in various operations.
+
+- **SET**: Sets the value of a key. If the key already holds a value, it is overwritten. You can also set an expiration time and other options.
+
+  ```bash
+  SET key "value"                  # Basic set command
+  SET key "value" EX 3600          # Set with expiration time (3600 seconds)
+  SET key "value" NX               # Set value only if the key does not already exist
+  ```
+
+- **GET**: Retrieves the value associated with a key.
+
+  ```bash
+  GET key
+  ```
+
+- **DEL**: Deletes one or more keys.
+
+  ```bash
+  DEL key                          # Delete a single key
+  DEL key1 key2 key3               # Delete multiple keys
+  ```
+
+- **EXPIRE**: Sets a timeout on a key, after which the key will be automatically deleted. 
+
+  ```bash
+  EXPIRE key 3600                  # Set expiration time to 3600 seconds (1 hour)
+  EXPIRE key 60                    # Set expiration time to 60 seconds
+  ```
+
+- **INCR/DECR**: Increments or decrements the value of a key by one. If the key does not exist, it is set to 0 before performing the operation.
+
+  ```bash
+  INCR counter                     # Increment the counter by 1
+  DECR counter                     # Decrement the counter by 1
+  INCRBY counter 10               # Increment the counter by 10
+  DECRBY counter 5                # Decrement the counter by 5
+  ```
+
+These commands cover the most common operations for managing simple key-value data in Redis. Each command has variations to handle different use cases and requirements.
+```
+
+
+
+ 
+</details>
+
