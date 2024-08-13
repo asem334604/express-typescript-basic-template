@@ -2471,10 +2471,236 @@ Redis provides a set of basic commands for interacting with key-value pairs. The
   ```
 
 These commands cover the most common operations for managing simple key-value data in Redis. Each command has variations to handle different use cases and requirements.
-```
 
 
 
- 
+#### Working with Sets
+
+Redis sets are unordered collections of unique elements. They provide various commands for adding, removing, and querying elements in a set.
+
+- **SADD**: Adds one or more members to a set. If the set does not exist, a new set is created.
+
+  ```bash
+  SADD myset "element1" "element2"  # Add multiple elements
+  SADD myset "element3"             # Add a single element
+  ```
+
+- **SREM**: Removes one or more members from a set.
+
+  ```bash
+  SREM myset "element1" "element2"  # Remove multiple elements
+  SREM myset "element3"             # Remove a single element
+  ```
+
+- **SMEMBERS**: Retrieves all the members of a set.
+
+  ```bash
+  SMEMBERS myset
+  ```
+
+- **SISMEMBER**: Checks if a value is a member of a set.
+
+  ```bash
+  SISMEMBER myset "element1"
+  ```
+
+- **SUNION/SINTER**: Performs a union or intersection on multiple sets.
+
+  ```bash
+  SUNION set1 set2                 # Returns the union of set1 and set2
+  SINTER set1 set2                 # Returns the intersection of set1 and set2
+  ```
+
+- **SDIFF**: Returns the members of the set resulting from the difference between the first set and all the successive sets.
+
+  ```bash
+  SDIFF set1 set2                 # Returns the difference between set1 and set2
+  ```
+
+- **SMOVE**: Moves a member from one set to another.
+
+  ```bash
+  SMOVE source_set destination_set "element"
+  ```
+
+These commands allow you to efficiently manage and query sets, making Redis a powerful tool for operations involving unique collections of data.
+
+
+#### Working with Lists
+
+Redis lists are ordered collections of elements. They support various operations for manipulating and querying lists.
+
+- **LPUSH**: Adds one or more elements to the beginning (head) of a list. If the list does not exist, it is created.
+
+  ```bash
+  LPUSH mylist "element1" "element2"  # Add multiple elements to the head of the list
+  LPUSH mylist "element3"             # Add a single element to the head
+  ```
+
+- **RPUSH**: Adds one or more elements to the end (tail) of a list.
+
+  ```bash
+  RPUSH mylist "element1" "element2"  # Add multiple elements to the tail of the list
+  RPUSH mylist "element3"             # Add a single element to the tail
+  ```
+
+- **LPOP**: Removes and returns the first element of a list.
+
+  ```bash
+  LPOP mylist
+  ```
+
+- **RPOP**: Removes and returns the last element of a list.
+
+  ```bash
+  RPOP mylist
+  ```
+
+- **LRANGE**: Retrieves a range of elements from a list, specified by the start and end indices.
+
+  ```bash
+  LRANGE mylist 0 10                # Get elements from index 0 to 10 (inclusive)
+  LRANGE mylist 1 -1                # Get elements from index 1 to the end of the list
+  ```
+
+- **LLEN**: Returns the length of a list.
+
+  ```bash
+  LLEN mylist
+  ```
+
+- **LINSERT**: Inserts a value before or after another value in the list.
+
+  ```bash
+  LINSERT mylist BEFORE "pivot" "new_element"  # Insert "new_element" before "pivot"
+  LINSERT mylist AFTER "pivot" "new_element"   # Insert "new_element" after "pivot"
+  ```
+
+- **LSET**: Sets the value of an element in a list by its index.
+
+  ```bash
+  LSET mylist 2 "new_value"           # Set the element at index 2 to "new_value"
+  ```
+
+These commands enable you to perform various operations on lists, including adding, removing, and accessing elements in an ordered sequence.
+
+
+#### Working with Ordered Lists (Sorted Sets)
+
+Redis sorted sets are similar to sets but with a unique feature: each element is associated with a score that is used to order the elements. This makes them useful for scenarios where you need to maintain an ordered collection of items.
+
+- **ZADD**: Adds one or more members to a sorted set, or updates the score of an existing member. If the sorted set does not exist, it is created.
+
+  ```bash
+  ZADD mysortedset 1 "element1"        # Add an element with score 1
+  ZADD mysortedset 2 "element2"        # Add an element with score 2
+  ZADD mysortedset 3 "element3"        # Add an element with score 3
+  ZADD mysortedset 4 "element4" NX     # Add element only if it does not already exist
+  ```
+
+- **ZRANGE**: Retrieves a range of members from a sorted set, by index, ordered from the lowest to the highest score.
+
+  ```bash
+  ZRANGE mysortedset 0 2               # Get elements with indices 0 to 2
+  ZRANGE mysortedset 0 -1              # Get all elements
+  ```
+
+- **ZRANGEBYSCORE**: Retrieves members within a specified score range, ordered from the lowest to the highest score.
+
+  ```bash
+  ZRANGEBYSCORE mysortedset 1 3        # Get elements with scores between 1 and 3
+  ```
+
+- **ZSCORE**: Retrieves the score of a member in a sorted set.
+
+  ```bash
+  ZSCORE mysortedset "element1"        # Get the score of "element1"
+  ```
+
+- **ZREM**: Removes one or more members from a sorted set.
+
+  ```bash
+  ZREM mysortedset "element1" "element2"  # Remove multiple elements
+  ZREM mysortedset "element3"             # Remove a single element
+  ```
+
+- **ZREMRANGEBYRANK**: Removes all members in a sorted set within the specified rank range.
+
+  ```bash
+  ZREMRANGEBYRANK mysortedset 0 1        # Remove elements with ranks 0 and 1
+  ```
+
+- **ZREMRANGEBYSCORE**: Removes all members in a sorted set within the specified score range.
+
+  ```bash
+  ZREMRANGEBYSCORE mysortedset 1 3       # Remove elements with scores between 1 and 3
+  ```
+
+These commands facilitate the management of ordered collections in Redis, allowing you to efficiently handle and query sorted data.
+
+
+#### Working with Objects as Values (Hashes)
+
+Redis hashes are maps between string field and string values, making them ideal for storing objects with multiple attributes. Each field in a hash is unique and maps to a value.
+
+- **HSET**: Sets the value of a field in a hash. If the hash does not exist, a new hash is created.
+
+  ```bash
+  HSET myhash field1 "value1"        # Set field1 in hash to "value1"
+  HSET myhash field2 "value2"        # Set field2 in hash to "value2"
+  ```
+
+- **HMSET**: Sets multiple fields in a hash at once.
+
+  ```bash
+  HMSET myhash field1 "value1" field2 "value2"  # Set multiple fields
+  ```
+
+- **HGET**: Retrieves the value of a field in a hash.
+
+  ```bash
+  HGET myhash field1                # Get the value of field1
+  ```
+
+- **HMGET**: Retrieves the values of multiple fields in a hash.
+
+  ```bash
+  HMGET myhash field1 field2       # Get values of field1 and field2
+  ```
+
+- **HDEL**: Deletes one or more fields from a hash.
+
+  ```bash
+  HDEL myhash field1 field2        # Remove field1 and field2 from the hash
+  ```
+
+- **HGETALL**: Retrieves all fields and values from a hash.
+
+  ```bash
+  HGETALL myhash                   # Get all fields and values
+  ```
+
+- **HLEN**: Returns the number of fields in a hash.
+
+  ```bash
+  HLEN myhash                      # Get the number of fields
+  ```
+
+- **HKEYS**: Returns all field names in a hash.
+
+  ```bash
+  HKEYS myhash                     # Get all field names
+  ```
+
+- **HVALS**: Returns all values in a hash.
+
+  ```bash
+  HVALS myhash                     # Get all values
+  ```
+
+These commands allow you to manage and query hash data structures efficiently, providing a versatile way to handle objects with multiple attributes in Redis.
+
+
+
 </details>
 
