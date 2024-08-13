@@ -753,24 +753,6 @@ Here's a brief overview of what each package does:
 
 ## 2. Setting Up `pg-mem` for Unit and Integration Testing
 
-### 2. Setting Up `pg-mem` for Unit and Integration Testing
-
-In this step, we will set up `pg-mem` to create an in-memory PostgreSQL instance for running unit and integration tests. This allows you to test your database interactions without requiring a live PostgreSQL server.
-
-#### Step 1: Import Required Modules
-First, create a new file in your `src` directory named `testDb.ts` (or a similar name). Import the necessary modules:
-
-```typescript
-import { newDb } from 'pg-mem';
-import { Pool } from 'pg';
-```
-
-- **newDb**: A function provided by `pg-mem` to create a new in-memory database.
-- **Pool**: The PostgreSQL connection pool provided by the `pg` library, which manages connections to the database.
-
-#### Step 2: Set Up the Mock Database
-### 2. Setting Up `pg-mem` for Unit and Integration Testing (Updated for Jest)
-
 In this section, you'll learn how to set up `pg-mem` for testing with Jest, a popular testing framework for JavaScript and TypeScript.
 
 #### Step 1: Import Required Modules
