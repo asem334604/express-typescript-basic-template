@@ -2429,7 +2429,7 @@ In each route handler, the logic is wrapped in a `try` block to catch any errors
 
 
 
-#### Basic Commands
+### Basic Commands
 
 Redis provides a set of basic commands for interacting with key-value pairs. These commands are foundational and are frequently used in various operations.
 
@@ -2474,7 +2474,7 @@ These commands cover the most common operations for managing simple key-value da
 
 
 
-#### Working with Sets
+### Working with Sets
 
 Redis sets are unordered collections of unique elements. They provide various commands for adding, removing, and querying elements in a set.
 
@@ -2526,7 +2526,7 @@ Redis sets are unordered collections of unique elements. They provide various co
 These commands allow you to efficiently manage and query sets, making Redis a powerful tool for operations involving unique collections of data.
 
 
-#### Working with Lists
+### Working with Lists
 
 Redis lists are ordered collections of elements. They support various operations for manipulating and querying lists.
 
@@ -2585,7 +2585,7 @@ Redis lists are ordered collections of elements. They support various operations
 These commands enable you to perform various operations on lists, including adding, removing, and accessing elements in an ordered sequence.
 
 
-#### Working with Ordered Lists (Sorted Sets)
+### Working with Ordered Lists (Sorted Sets)
 
 Redis sorted sets are similar to sets but with a unique feature: each element is associated with a score that is used to order the elements. This makes them useful for scenarios where you need to maintain an ordered collection of items.
 
@@ -2639,7 +2639,7 @@ Redis sorted sets are similar to sets but with a unique feature: each element is
 These commands facilitate the management of ordered collections in Redis, allowing you to efficiently handle and query sorted data.
 
 
-#### Working with Objects as Values (Hashes)
+### Working with Objects as Values (Hashes)
 
 Redis hashes are maps between string field and string values, making them ideal for storing objects with multiple attributes. Each field in a hash is unique and maps to a value.
 
@@ -2700,6 +2700,75 @@ Redis hashes are maps between string field and string values, making them ideal 
 
 These commands allow you to manage and query hash data structures efficiently, providing a versatile way to handle objects with multiple attributes in Redis.
 
+
+### Working with Ordered Lists (Sorted Sets)
+
+Redis sorted sets are similar to sets but with a unique feature: each element is associated with a score that is used to order the elements. This makes them useful for scenarios where you need to maintain an ordered collection of items.
+
+- **ZADD**: Adds one or more members to a sorted set, or updates the score of an existing member. If the sorted set does not exist, it is created.
+
+  ```bash
+  ZADD mysortedset 1 "element1"        # Add an element with score 1
+  ZADD mysortedset 2 "element2"        # Add an element with score 2
+  ZADD mysortedset 3 "element3"        # Add an element with score 3
+  ZADD mysortedset 4 "element4" NX     # Add element only if it does not already exist
+  ```
+
+- **ZRANGE**: Retrieves a range of members from a sorted set, by index, ordered from the lowest to the highest score. You can also use the optional `WITHSCORES` parameter to include scores in the output.
+
+  ```bash
+  ZRANGE mysortedset 0 2               # Get elements with indices 0 to 2
+  ZRANGE mysortedset 0 -1              # Get all elements from the start to the end
+  ZRANGE mysortedset 0 -1 WITHSCORES  # Get all elements with their scores
+  ```
+
+- **ZRANGEBYSCORE**: Retrieves members within a specified score range. This command is useful for querying elements with scores that fall within a certain range.
+
+  ```bash
+  ZRANGEBYSCORE mysortedset 1 3        # Get elements with scores between 1 and 3
+  ZRANGEBYSCORE mysortedset 1 3 WITHSCORES # Get elements with their scores within the range
+  ```
+
+- **ZSCORE**: Retrieves the score of a specific member in a sorted set.
+
+  ```bash
+  ZSCORE mysortedset "element1"        # Get the score of "element1"
+  ```
+
+- **ZREM**: Removes one or more members from a sorted set. If the member does not exist, it is ignored.
+
+  ```bash
+  ZREM mysortedset "element1" "element2"  # Remove multiple elements
+  ZREM mysortedset "element3"             # Remove a single element
+  ```
+
+- **ZREMRANGEBYRANK**: Removes all members in a sorted set within the specified rank range. Ranks are zero-based and start from 0 for the member with the lowest score.
+
+  ```bash
+  ZREMRANGEBYRANK mysortedset 0 1        # Remove elements with ranks 0 and 1
+  ZREMRANGEBYRANK mysortedset 0 -1       # Remove all elements
+  ```
+
+- **ZREMRANGEBYSCORE**: Removes all members in a sorted set within the specified score range. This is useful for cleaning up old or irrelevant data.
+
+  ```bash
+  ZREMRANGEBYSCORE mysortedset 1 3       # Remove elements with scores between 1 and 3
+  ZREMRANGEBYSCORE mysortedset -inf 0    # Remove elements with scores less than or equal to 0
+  ```
+
+- **ZCARD**: Returns the number of members in a sorted set.
+
+  ```bash
+  ZCARD mysortedset                    # Get the total number of members
+  ```
+
+- **ZCOUNT**: Counts the number of members in a sorted set within a specified score range.
+
+  ```bash
+  ZCOUNT mysortedset 1 3                # Count elements with scores between 1 and 3
+  ```
+
+These commands facilitate the management of ordered collections in Redis, allowing you to efficiently handle and query sorted data.
 
 
 </details>
