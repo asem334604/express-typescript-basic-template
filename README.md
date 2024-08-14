@@ -2425,7 +2425,7 @@ In each route handler, the logic is wrapped in a `try` block to catch any errors
   - [Site Visits Metadata](#site-visits-metadata)
   - [Site Scrolling Metadata](#site-scrolling-metadata)
   - [Site Duration Metadata](#site-duration-metadata)
-  - [Unique Visits Counting](#unique-visits-counting)
+  - [Site Mouse Click Data Heatmaps](#site-mouse-click-data-heatmaps)
 
 
 ## Available Methods
@@ -3212,6 +3212,421 @@ Redis's time-dependent attempt limits can effectively manage and control user ac
 
 
 
+
+### Daily Quota Management
+
+Redis can be used to manage daily quotas for various operations, such as API requests or resource usage. This allows you to enforce limits and track usage over a 24-hour period.
+
+- **INCR**: Increments the quota counter for a specific user or operation. This tracks the number of operations or requests made within the day.
+
+  ```bash
+  INCR quota:user123   # Increment the daily quota counter for "user123"
+  ```
+
+- **SETEX**: Initializes the quota counter with an expiration time of 24 hours. This ensures that the quota resets daily.
+
+  ```bash
+  SETEX quota:user123 86400 1   # Set the initial daily quota counter for "user123" with TTL of 24 hours (86400 seconds)
+  ```
+
+- **GET**: Retrieves the current value of the daily quota counter. This helps to check the remaining quota for a user or operation.
+
+  ```bash
+  GET quota:user123   # Get the current daily quota value for "user123"
+  ```
+
+- **EXPIRE**: Updates the expiration time of the quota counter to ensure it resets at the end of the day.
+
+  ```bash
+  EXPIRE quota:user123 86400   # Set or update the TTL of the daily quota counter for "user123" to 24 hours
+  ```
+
+- **QUOTA CHECK**: Implement logic in your application to check the quota before allowing further operations. If the quota is exceeded, deny additional requests.
+
+  ```javascript
+  // Example in JavaScript
+  async function checkDailyQuota(userId) {
+    const quota = await redis.get(`quota:${userId}`);
+    if (quota && parseInt(quota) > 100) { // Assuming a daily limit of 100 requests
+      return 'Daily quota exceeded. Please try again tomorrow.';
+    }
+    await redis.incr(`quota:${userId}`);
+    await redis.expire(`quota:${userId}`, 86400); // Set TTL to 24 hours
+    return 'Request allowed.';
+  }
+  ```
+
+Redis's daily quota management capabilities help enforce usage limits and ensure that resources are distributed fairly throughout the day.
+
+
+
+### Ranking Items
+
+Redis supports ranking items through sorted sets, which are useful for maintaining and querying ranked lists such as leaderboards or top-performing items.
+
+- **ZADD**: Adds an item to a sorted set with a given score. This score determines the rank of the item within the set.
+
+  ```bash
+  ZADD leaderboard 1500 "user1"   # Add "user1" to the sorted set "leaderboard" with a score of 1500
+  ```
+
+- **ZRANGE**: Retrieves items from the sorted set within a specified range, based on their scores. This is useful for getting the top N items.
+
+  ```bash
+  ZRANGE leaderboard 0 9 WITHSCORES   # Get the top 10 items (rank 1 to 10) from "leaderboard" with scores
+  ```
+
+- **ZRANK**: Gets the rank of an item in the sorted set. The rank is zero-based, meaning the highest score has rank 0.
+
+  ```bash
+  ZRANK leaderboard "user1"   # Get the rank of "user1" in the "leaderboard" sorted set
+  ```
+
+- **ZREVRANGE**: Retrieves items from the sorted set in reverse order, allowing you to get the highest scoring items first.
+
+  ```bash
+  ZREVRANGE leaderboard 0 9 WITHSCORES   # Get the top 10 items (highest scores first) from "leaderboard" with scores
+  ```
+
+- **ZINCRBY**: Increments the score of an existing item in the sorted set. This is useful for updating rankings, such as increasing a user’s score.
+
+  ```bash
+  ZINCRBY leaderboard 100 "user1"   # Increment the score of "user1" in "leaderboard" by 100
+  ```
+
+- **ZREM**: Removes an item from the sorted set. This can be used to delete outdated or irrelevant items from the ranking.
+
+  ```bash
+  ZREM leaderboard "user1"   # Remove "user1" from the "leaderboard" sorted set
+  ```
+
+Redis's sorted sets offer an efficient way to maintain and query ranked lists, making them ideal for applications that require real-time ranking and leaderboard functionality.
+
+
+Here’s the content for the **Calculating Average Ratings** sub-paragraph:
+
+```markdown
+### Calculating Average Ratings
+
+Redis can be used to calculate average ratings or scores for items by leveraging sorted sets and other data structures. This approach allows for efficient aggregation and computation of averages.
+
+- **ZADD**: Adds rating scores to a sorted set. The score represents the rating given by users.
+
+  ```bash
+  ZADD ratings:item123 4.5 "user1"   # Add a rating of 4.5 for "item123" given by "user1"
+  ZADD ratings:item123 3.7 "user2"   # Add another rating of 3.7 for "item123" given by "user2"
+  ```
+
+- **ZRANGE**: Retrieves all ratings for an item, which can then be used to calculate the average.
+
+  ```bash
+  ZRANGE ratings:item123 0 -1 WITHSCORES   # Get all ratings for "item123" with their scores
+  ```
+
+- **ZCARD**: Gets the number of ratings in the sorted set. This is used to determine the number of ratings for averaging.
+
+  ```bash
+  ZCARD ratings:item123   # Get the number of ratings for "item123"
+  ```
+
+- **AVG RATING CALCULATION**: Compute the average rating by summing all ratings and dividing by the number of ratings. This computation is performed in your application logic.
+
+  ```javascript
+  // Example in JavaScript
+  async function calculateAverageRating(itemId) {
+    const ratings = await redis.zrange(`ratings:${itemId}`, 0, -1, 'WITHSCORES');
+    const totalRatings = ratings.length / 2;
+    const sum = ratings.reduce((acc, _, i) => i % 2 === 1 ? acc + parseFloat(ratings[i]) : acc, 0);
+    return totalRatings > 0 ? (sum / totalRatings).toFixed(2) : 'No ratings available.';
+  }
+
+Redis's sorted sets and related commands provide a foundation for calculating average ratings efficiently, allowing for real-time updates and aggregation of scores.
+
+
+
+### Real-Time Rating Updates
+
+Redis can be used to update and manage ratings in real-time, ensuring that rating data is current and reflects the latest user inputs. This is particularly useful for applications with dynamic content where ratings need to be updated and displayed immediately.
+
+- **ZADD**: Adds or updates a rating in the sorted set. If the item already exists, the score is updated; otherwise, a new entry is created.
+
+  ```bash
+  ZADD ratings:item123 4.9 "user3"   # Update the rating of "item123" to 4.9 given by "user3"
+  ```
+
+- **ZINCRBY**: Increments the rating score for an existing item. This is useful if you want to adjust a rating by a certain amount.
+
+  ```bash
+  ZINCRBY ratings:item123 0.5 "user3"   # Increment the rating score of "item123" by 0.5 for "user3"
+  ```
+
+- **ZREVRANGE**: Retrieves the highest-rated items in real-time. This can be used to display top-rated items or provide live updates on ranking.
+
+  ```bash
+  ZREVRANGE ratings 0 9 WITHSCORES   # Get the top 10 rated items from the "ratings" sorted set, with scores
+  ```
+
+- **ZREM**: Removes a rating from the sorted set. This can be used to handle the removal of a rating or to clean up outdated data.
+
+  ```bash
+  ZREM ratings:item123 "user3"   # Remove the rating for "item123" given by "user3"
+  ```
+
+- **REAL-TIME UPDATES IN APPLICATION**: Implement logic in your application to handle real-time updates and display the latest rating information.
+
+  ```javascript
+  // Example in JavaScript
+  async function updateRating(itemId, userId, newRating) {
+    await redis.zadd(`ratings:${itemId}`, newRating, userId);
+    return `Rating updated to ${newRating} for ${itemId}`;
+  }
+  ```
+
+Redis's capabilities for real-time rating updates ensure that your application can provide up-to-date rating information and maintain accurate rankings as user interactions occur.
+
+
+
+
+### Site Visits Metadata
+
+Redis can be used to track site visits metadata, including both unique and non-unique visits. This allows for detailed analytics and monitoring of user interactions.
+
+- **Tracking Non-Unique Visits**: Use simple counters to track the total number of visits to a site or page.
+
+  ```bash
+  INCR site:homepage:visits   # Increment the total visit count for the homepage
+  ```
+
+- **Tracking Unique Visits**: Use HyperLogLog to track unique visits, providing an estimate of distinct visitors.
+
+  ```bash
+  PFADD unique_visits:homepage 192.168.1.1   # Add the IP address to the HyperLogLog for unique visits
+  ```
+
+- **IP Metadata**: Include IP addresses or other metadata with each visit to enrich visit records and analyze user behavior.
+
+  ```bash
+  HINCRBY site:metadata:homepage unique_visits 1   # Increment the unique visit count for the homepage
+  ```
+
+- **GET**: Retrieves the total visit count for a specific page or site. This shows the number of non-unique visits.
+
+  ```bash
+  GET site:homepage:visits   # Get the total visit count for the homepage
+  ```
+
+- **PFCOUNT**: Retrieves the estimated number of unique visits from the HyperLogLog.
+
+  ```bash
+  PFCOUNT unique_visits:homepage   # Get the estimated number of unique visits for the homepage
+  ```
+
+- **SITE VISITS ANALYTICS**: Implement logic in your application to record and analyze site visits, including both unique and non-unique visits.
+
+  ```javascript
+  // Example in JavaScript
+  async function recordVisit(page, ipAddress) {
+    await redis.incr(`site:${page}:visits`);
+    await redis.pfadd(`unique_visits:${page}`, ipAddress);
+    return `Visit recorded for ${page}`;
+  }
+
+  async function getVisitStats(page) {
+    const totalVisits = await redis.get(`site:${page}:visits`);
+    const uniqueVisits = await redis.pfcount(`unique_visits:${page}`);
+    return {
+      totalVisits,
+      uniqueVisits
+    };
+  }
+  ```
+
+Redis’s combination of counters and HyperLogLog enables detailed tracking of site visits, distinguishing between unique and total visits, and providing valuable insights into user 
+
+
+
+### Site Scrolling Metadata
+
+Redis can be used to track and analyze site scrolling behavior, capturing data on how far users scroll on a page. This helps in understanding user engagement and content interaction. Additionally, users can be categorized based on their scrolling depth to tailor content or marketing strategies.
+
+- **Tracking Scroll Depth**: Use Redis hashes to record and update scroll depth data for each user or page.
+
+  ```bash
+  HSET scroll_depth:homepage user123 80   # Set the scroll depth (in percentage) for "user123" on the homepage
+  ```
+
+- **HINCRBY**: Increment scroll depth data if tracking incremental scroll events.
+
+  ```bash
+  HINCRBY scroll_depth:homepage user123 20   # Increment the scroll depth by 20% for "user123" on the homepage
+  ```
+
+- **GET**: Retrieve the scroll depth for a specific user on a page.
+
+  ```bash
+  HGET scroll_depth:homepage user123   # Get the scroll depth for "user123" on the homepage
+  ```
+
+- **ZADD**: Use sorted sets to rank users based on their scroll depth or engagement level.
+
+  ```bash
+  ZADD scroll_engagement 80 "user123"   # Add "user123" to the sorted set with a score representing scroll depth
+  ```
+
+- **ZRANGE**: Retrieve the top users based on scroll engagement.
+
+  ```bash
+  ZRANGE scroll_engagement 0 9 WITHSCORES   # Get the top 10 users based on scroll engagement
+  ```
+
+- **Categorizing Users Based on Scroll Depth**:
+  - Define categories based on scroll depth ranges, such as "Low Engagement", "Medium Engagement", and "High Engagement".
+  - Use Redis hashes to set and retrieve user categories.
+
+  ```bash
+  HSET user_categories:user123 category "High Engagement"   # Set category for "user123" based on their scroll depth
+  ```
+
+  ```bash
+  HGET user_categories:user123   # Retrieve the category for "user123"
+  ```
+
+- **SCROLL ANALYTICS**: Implement logic in your application to record scroll depth, categorize users, and analyze their engagement.
+
+  ```javascript
+  // Example in JavaScript
+  async function recordScrollDepth(page, userId, depth) {
+    await redis.hset(`scroll_depth:${page}`, userId, depth);
+    await redis.zadd('scroll_engagement', depth, userId);
+
+    // Categorize user based on scroll depth
+    let category;
+    if (depth >= 75) category = 'High Engagement';
+    else if (depth >= 25) category = 'Medium Engagement';
+    else category = 'Low Engagement';
+
+    await redis.hset(`user_categories:${userId}`, 'category', category);
+    return `Scroll depth ${depth}% recorded for ${userId} on ${page}, categorized as ${category}`;
+  }
+
+  async function getScrollDepth(page, userId) {
+    return await redis.hget(`scroll_depth:${page}`, userId);
+  }
+
+  async function getUserCategory(userId) {
+    return await redis.hget(`user_categories:${userId}`, 'category');
+  }
+  ```
+
+Redis’s capabilities allow for detailed tracking of user scrolling behavior, categorization based on engagement levels, and analysis of content interaction, enabling targeted strategies and insights into user behavior.
+
+
+Here’s the content for the **Site Mouse Click Data Heatmaps** sub-paragraph, which has replaced the previous **Unique Visits Counting**:
+
+### Site Duration Metadata
+
+Redis can be used to track and analyze the duration of user visits on a website. This data helps in understanding user engagement and the amount of time spent on specific pages or sections.
+
+- **Tracking Session Duration**: Use Redis hashes to record and update the duration of user sessions on different pages.
+
+  ```bash
+  HSET session_duration:homepage user123 120   # Set the session duration (in seconds) for "user123" on the homepage
+  ```
+
+- **INCRBY**: Increment session duration data for ongoing user sessions.
+
+  ```bash
+  INCRBY session_duration:homepage:user123 30   # Increment the session duration by 30 seconds for "user123" on the homepage
+  ```
+
+- **GET**: Retrieve the total session duration for a specific user on a page.
+
+  ```bash
+  GET session_duration:homepage:user123   # Get the session duration for "user123" on the homepage
+  ```
+
+- **ZADD**: Use sorted sets to rank users based on their total session duration.
+
+  ```bash
+  ZADD session_engagement 120 "user123"   # Add "user123" to the sorted set with a score representing session duration
+  ```
+
+- **ZRANGE**: Retrieve the top users based on session duration.
+
+  ```bash
+  ZRANGE session_engagement 0 9 WITHSCORES   # Get the top 10 users based on session duration
+  ```
+
+- **DURATION ANALYTICS**: Implement logic in your application to record, analyze, and visualize user session durations for insights into engagement.
+
+  ```javascript
+  // Example in JavaScript
+  async function recordSessionDuration(page, userId, duration) {
+    await redis.hset(`session_duration:${page}`, userId, duration);
+    await redis.zadd('session_engagement', duration, userId);
+    return `Session duration ${duration} seconds recorded for ${userId} on ${page}`;
+  }
+
+  async function getSessionDuration(page, userId) {
+    return await redis.hget(`session_duration:${page}`, userId);
+  }
+
+  async function getTopSessions() {
+    return await redis.zrange('session_engagement', 0, -1, 'WITHSCORES');
+  }
+  ```
+
+Redis’s data structures support tracking and analyzing site duration metadata, enabling detailed insights into user engagement and time spent on your site.
+
+
+### Site Mouse Click Data Heatmaps
+
+Redis can be used to generate heatmaps for mouse clicks on a website, providing insights into user interactions and popular areas on the page. This data helps in analyzing user behavior and improving website design.
+
+- **Tracking Clicks**: Use Redis hashes to record and update click data at specific coordinates on a page.
+
+  ```bash
+  HINCRBY click_heatmap:homepage "x:100:y:200" 1   # Increment click count at coordinates (100, 200) on the homepage
+  ```
+
+- **GET**: Retrieve click data for specific coordinates to generate heatmaps.
+
+  ```bash
+  HGET click_heatmap:homepage "x:100:y:200"   # Get the number of clicks at coordinates (100, 200) on the homepage
+  ```
+
+- **ZADD**: Use sorted sets to rank areas based on the number of clicks.
+
+  ```bash
+  ZADD click_engagement 150 "x:100:y:200"   # Add coordinate to the sorted set with a score representing the number of clicks
+  ```
+
+- **ZRANGE**: Retrieve the most clicked areas based on engagement data.
+
+  ```bash
+  ZRANGE click_engagement 0 9 WITHSCORES   # Get the top 10 clicked areas based on the number of clicks
+  ```
+
+- **ANALYZE CLICK DATA**: Implement logic in your application to record, retrieve, and analyze click data to create visual heatmaps and improve user experience.
+
+  ```javascript
+  // Example in JavaScript
+  async function recordClick(page, x, y) {
+    await redis.hincrby(`click_heatmap:${page}`, `x:${x}:y:${y}`, 1);
+    await redis.zadd('click_engagement', 1, `x:${x}:y:${y}`);
+    return `Click recorded at (${x}, ${y}) on ${page}`;
+  }
+
+  async function getClickHeatmap(page) {
+    return await redis.hgetall(`click_heatmap:${page}`);
+  }
+
+  async function getTopClickedAreas() {
+    return await redis.zrange('click_engagement', 0, -1, 'WITHSCORES');
+  }
+  ```
+
+Redis's efficient data structures allow for tracking and analyzing mouse click data, enabling the creation of heatmaps that visualize user interactions and enhance web design strategies.
 
 
 </details>
