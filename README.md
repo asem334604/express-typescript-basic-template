@@ -2428,6 +2428,7 @@ In each route handler, the logic is wrapped in a `try` block to catch any errors
   - [Unique Visits Counting](#unique-visits-counting)
 
 
+## Available Methods
 
 ### Basic Commands
 
@@ -2701,74 +2702,368 @@ Redis hashes are maps between string field and string values, making them ideal 
 These commands allow you to manage and query hash data structures efficiently, providing a versatile way to handle objects with multiple attributes in Redis.
 
 
-### Working with Ordered Lists (Sorted Sets)
+### Working with Geospatial Data
 
-Redis sorted sets are similar to sets but with a unique feature: each element is associated with a score that is used to order the elements. This makes them useful for scenarios where you need to maintain an ordered collection of items.
+Redis supports geospatial data types and commands to manage and query location-based data. This is useful for applications that involve location-based services, such as finding nearby places or tracking positions.
 
-- **ZADD**: Adds one or more members to a sorted set, or updates the score of an existing member. If the sorted set does not exist, it is created.
-
-  ```bash
-  ZADD mysortedset 1 "element1"        # Add an element with score 1
-  ZADD mysortedset 2 "element2"        # Add an element with score 2
-  ZADD mysortedset 3 "element3"        # Add an element with score 3
-  ZADD mysortedset 4 "element4" NX     # Add element only if it does not already exist
-  ```
-
-- **ZRANGE**: Retrieves a range of members from a sorted set, by index, ordered from the lowest to the highest score. You can also use the optional `WITHSCORES` parameter to include scores in the output.
+- **GEOADD**: Adds a geospatial item (point) with a specified longitude, latitude, and name to a sorted set. The item is stored as a member in a sorted set where the score is calculated from its coordinates.
 
   ```bash
-  ZRANGE mysortedset 0 2               # Get elements with indices 0 to 2
-  ZRANGE mysortedset 0 -1              # Get all elements from the start to the end
-  ZRANGE mysortedset 0 -1 WITHSCORES  # Get all elements with their scores
+  GEOADD mygeospatialset 13.361389 38.115656 "Palermo"   # Add location with coordinates and name
+  GEOADD mygeospatialset 15.087269 37.502669 "Catania"   # Add another location
   ```
 
-- **ZRANGEBYSCORE**: Retrieves members within a specified score range. This command is useful for querying elements with scores that fall within a certain range.
+- **GEOPOS**: Retrieves the longitude and latitude of one or more members in a geospatial set.
 
   ```bash
-  ZRANGEBYSCORE mysortedset 1 3        # Get elements with scores between 1 and 3
-  ZRANGEBYSCORE mysortedset 1 3 WITHSCORES # Get elements with their scores within the range
+  GEOPOS mygeospatialset "Palermo"   # Get coordinates for "Palermo"
+  GEOPOS mygeospatialset "Catania"   # Get coordinates for "Catania"
   ```
 
-- **ZSCORE**: Retrieves the score of a specific member in a sorted set.
+- **GEODIST**: Calculates the distance between two members in a geospatial set. The distance can be specified in meters, kilometers, miles, or feet.
 
   ```bash
-  ZSCORE mysortedset "element1"        # Get the score of "element1"
+  GEODIST mygeospatialset "Palermo" "Catania" km  # Calculate distance between Palermo and Catania in kilometers
   ```
 
-- **ZREM**: Removes one or more members from a sorted set. If the member does not exist, it is ignored.
+- **GEORADIUS**: Retrieves all members in a geospatial set within a specified radius from a given point. The radius is specified in meters, kilometers, miles, or feet.
 
   ```bash
-  ZREM mysortedset "element1" "element2"  # Remove multiple elements
-  ZREM mysortedset "element3"             # Remove a single element
+  GEORADIUS mygeospatialset 15.087269 37.502669 100 km    # Find members within 100 km of the given coordinates
+  GEORADIUS mygeospatialset 15.087269 37.502669 200 km WITHDIST  # Find members within 200 km and include distance
   ```
 
-- **ZREMRANGEBYRANK**: Removes all members in a sorted set within the specified rank range. Ranks are zero-based and start from 0 for the member with the lowest score.
+- **GEORADIUSBYMEMBER**: Retrieves all members within a specified radius from a given member in the geospatial set.
 
   ```bash
-  ZREMRANGEBYRANK mysortedset 0 1        # Remove elements with ranks 0 and 1
-  ZREMRANGEBYRANK mysortedset 0 -1       # Remove all elements
+  GEORADIUSBYMEMBER mygeospatialset "Catania" 50 km       # Find members within 50 km of "Catania"
+  GEORADIUSBYMEMBER mygeospatialset "Catania" 100 km WITHDIST # Find members within 100 km of "Catania" and include distance
   ```
 
-- **ZREMRANGEBYSCORE**: Removes all members in a sorted set within the specified score range. This is useful for cleaning up old or irrelevant data.
+These commands enable effective management and querying of geospatial data, allowing for powerful location-based functionalities in Redis.
+
+
+
+#### Pub/Sub (Publish/Subscribe Messaging)
+
+Redis provides a publish/subscribe (pub/sub) messaging system that allows for message broadcasting to multiple subscribers. This feature is useful for scenarios where real-time messaging or notifications are needed.
+
+- **PUBLISH**: Sends a message to a specified channel. All clients subscribed to that channel will receive the message.
 
   ```bash
-  ZREMRANGEBYSCORE mysortedset 1 3       # Remove elements with scores between 1 and 3
-  ZREMRANGEBYSCORE mysortedset -inf 0    # Remove elements with scores less than or equal to 0
+  PUBLISH mychannel "Hello, Redis!"  # Send a message to the "mychannel" channel
   ```
 
-- **ZCARD**: Returns the number of members in a sorted set.
+- **SUBSCRIBE**: Subscribes to one or more channels. Messages published to these channels will be received by the subscriber.
 
   ```bash
-  ZCARD mysortedset                    # Get the total number of members
+  SUBSCRIBE mychannel   # Subscribe to the "mychannel" channel
   ```
 
-- **ZCOUNT**: Counts the number of members in a sorted set within a specified score range.
+- **UNSUBSCRIBE**: Unsubscribes from one or more channels. If no channels are specified, it unsubscribes from all channels.
 
   ```bash
-  ZCOUNT mysortedset 1 3                # Count elements with scores between 1 and 3
+  UNSUBSCRIBE mychannel   # Unsubscribe from the "mychannel" channel
   ```
 
-These commands facilitate the management of ordered collections in Redis, allowing you to efficiently handle and query sorted data.
+- **PSUBSCRIBE**: Subscribes to channels matching a pattern. This allows for more flexible subscriptions where messages can be received from multiple channels that match the pattern.
+
+  ```bash
+  PSUBSCRIBE "news.*"    # Subscribe to all channels matching the pattern "news.*"
+  ```
+
+- **PUNSUBSCRIBE**: Unsubscribes from channels matching a pattern. Like `PSUBSCRIBE`, this allows unsubscribing from multiple channels.
+
+  ```bash
+  PUNSUBSCRIBE "news.*"  # Unsubscribe from all channels matching the pattern "news.*"
+  ```
+
+Pub/Sub in Redis facilitates real-time messaging by allowing clients to publish messages to channels and other clients to subscribe and receive those messages. This is particularly useful for building notification systems, chat applications, and other real-time features.
+
+
+#### Transactions and Pipelining
+
+Redis supports transactions and pipelining to optimize operations and manage multiple commands more efficiently.
+
+- **MULTI**: Starts a transaction block. Commands issued after this command are queued for execution and will be executed atomically when `EXEC` is called.
+
+  ```bash
+  MULTI                         # Start a transaction block
+  SET key1 "value1"             # Queue commands
+  SET key2 "value2"
+  EXEC                          # Execute all commands in the transaction
+  ```
+
+- **EXEC**: Executes all commands in the transaction block started by `MULTI`.
+
+  ```bash
+  MULTI
+  SET key1 "value1"
+  SET key2 "value2"
+  EXEC                          # All commands are executed as a single atomic operation
+  ```
+
+- **DISCARD**: Aborts the transaction block started by `MULTI` and discards all queued commands.
+
+  ```bash
+  MULTI
+  SET key1 "value1"
+  SET key2 "value2"
+  DISCARD                        # Discard all queued commands without execution
+  ```
+
+- **WATCH**: Monitors one or more keys for changes. If any of the watched keys are modified before the transaction is executed, the transaction is aborted.
+
+  ```bash
+  WATCH key1                     # Monitor key1 for changes
+  MULTI
+  SET key1 "value1"
+  EXEC                          # If key1 is modified, transaction will not execute
+  ```
+
+- **Pipelining**: Allows multiple commands to be sent to the Redis server in a single request. This reduces the network overhead and can significantly speed up the execution of multiple commands.
+
+  ```bash
+  # Example using Redis CLI (not a single command but shows pipelining concept)
+  redis-cli --pipe <<EOF
+  SET key1 "value1"
+  SET key2 "value2"
+  SET key3 "value3"
+  EOF
+  ```
+
+Transactions and pipelining in Redis provide powerful mechanisms for handling multiple commands efficiently. Transactions ensure atomic execution of commands, while pipelining improves performance by reducing round-trip times between the client and server.
+
+
+
+### Stream Data Type
+
+Redis Streams are a data structure that represents a log of messages, where each message is identified by a unique ID and can contain multiple fields and values. Streams are useful for building real-time data pipelines and event sourcing systems.
+
+- **XADD**: Adds a new entry to a stream. The entry is identified by a unique ID generated by Redis, or you can specify your own ID.
+
+  ```bash
+  XADD mystream * "field1" "value1" "field2" "value2"  # Add an entry with auto-generated ID
+  XADD mystream 1686100800000-0 "field1" "value1"     # Add an entry with a specific ID
+  ```
+
+- **XRANGE**: Retrieves a range of entries from a stream. You can specify a range of IDs or use special IDs like `-` for the first entry and `+` for the latest entry.
+
+  ```bash
+  XRANGE mystream - +           # Get all entries in the stream
+  XRANGE mystream 1686100800000-0 1686100800000-5  # Get entries within a specific ID range
+  ```
+
+- **XREVRANGE**: Retrieves a range of entries from a stream in reverse order. This is useful for querying the most recent entries first.
+
+  ```bash
+  XREVRANGE mystream + -           # Get all entries in reverse order
+  XREVRANGE mystream 1686100800000-5 1686100800000-0  # Get entries within a specific ID range in reverse order
+  ```
+
+- **XREAD**: Reads new entries from one or more streams. This command is often used to consume data from a stream in a blocking manner.
+
+  ```bash
+  XREAD COUNT 2 STREAMS mystream 0  # Read up to 2 new entries from the stream, starting from ID 0
+  XREAD BLOCK 5000 COUNT 2 STREAMS mystream 0  # Block for up to 5000 milliseconds if no new entries are available
+  ```
+
+- **XDEL**: Deletes specific entries from a stream by their IDs. This is useful for cleaning up old or irrelevant data.
+
+  ```bash
+  XDEL mystream 1686100800000-0  # Delete the entry with a specific ID
+  ```
+
+- **XTRIM**: Trims a stream to a specified length or maximum size. This helps in managing memory usage by removing older entries.
+
+  ```bash
+  XTRIM mystream MAXLEN 1000      # Trim the stream to keep at most 1000 entries
+  XTRIM mystream MINID 1686100800000-0  # Trim the stream to keep entries with IDs greater than the specified ID
+  ```
+
+Redis Streams offer a powerful way to handle time-series data and real-time messaging, making them suitable for various applications such as logging, messaging, and event sourcing.
+
+
+
+### HyperLogLog
+
+Redis HyperLogLog is a probabilistic data structure used to estimate the cardinality (i.e., the number of unique elements) of a set. It is highly space-efficient and useful for scenarios where exact counting is not necessary but an approximate count is sufficient.
+
+- **PFADD**: Adds elements to a HyperLogLog data structure. This command updates the HyperLogLog with new elements, which will be used to estimate the number of unique elements.
+
+  ```bash
+  PFADD myhyperloglog "element1" "element2" "element3"  # Add elements to the HyperLogLog
+  ```
+
+- **PFCOUNT**: Returns the approximated cardinality (number of unique elements) of the HyperLogLog. This command provides an estimate based on the data added.
+
+  ```bash
+  PFCOUNT myhyperloglog     # Get the approximate number of unique elements
+  ```
+
+- **PFMERGE**: Merges multiple HyperLogLogs into one. This is useful for combining data from different sources or partitions.
+
+  ```bash
+  PFMERGE mymergedhyperloglog myhyperloglog1 myhyperloglog2  # Merge multiple HyperLogLogs
+  ```
+
+HyperLogLog is particularly useful when working with large datasets where memory efficiency is crucial. It provides an approximate count of unique elements with very low memory usage, making it ideal for analytics and monitoring tasks where exact precision is less critical.
+
+
+### Bitmaps
+
+Redis Bitmaps are a data structure used to handle binary data, allowing you to set, clear, and query bits. They are useful for operations like tracking user activity, managing flags, or implementing compact data storage.
+
+- **SETBIT**: Sets or clears the bit at a specific offset in the bitmap. If the offset is greater than the current size of the bitmap, the bitmap will be extended.
+
+  ```bash
+  SETBIT mybitmap 7 1    # Set the bit at offset 7 to 1 (true)
+  SETBIT mybitmap 7 0    # Clear the bit at offset 7 (set to 0)
+  ```
+
+- **GETBIT**: Retrieves the value of the bit at a specific offset. Returns 0 if the bit is not set.
+
+  ```bash
+  GETBIT mybitmap 7      # Get the value of the bit at offset 7
+  ```
+
+- **BITCOUNT**: Counts the number of set bits (bits with value 1) in the bitmap. You can specify a range of bytes to count.
+
+  ```bash
+  BITCOUNT mybitmap      # Count all set bits in the bitmap
+  BITCOUNT mybitmap 0 1  # Count set bits in the range of bytes 0 to 1
+  ```
+
+- **BITOP**: Performs bitwise operations (AND, OR, XOR, NOT) between multiple bitmaps and stores the result in a destination bitmap.
+
+  ```bash
+  BITOP AND resultbitmap mybitmap1 mybitmap2  # Perform AND operation on mybitmap1 and mybitmap2, store result in resultbitmap
+  BITOP OR resultbitmap mybitmap1 mybitmap2   # Perform OR operation
+  BITOP XOR resultbitmap mybitmap1 mybitmap2  # Perform XOR operation
+  BITOP NOT resultbitmap mybitmap             # Perform NOT operation
+  ```
+
+- **BITPOS**: Finds the first bit set to 1 or 0, starting from a given offset. Useful for searching within a bitmap.
+
+  ```bash
+  BITPOS mybitmap 1     # Find the first bit set to 1
+  BITPOS mybitmap 0 10  # Find the first bit set to 0, starting from offset 10
+  ```
+
+Redis Bitmaps provide a compact and efficient way to manage binary data, enabling various applications such as user activity tracking, implementing flags or states, and performing efficient data processing tasks.
+
+
+### Persistence Options
+
+Redis offers different persistence options to ensure data durability and recovery. You can choose between snapshotting and append-only file (AOF) based persistence, or use both together for greater reliability.
+
+- **RDB (Redis Database Backup)**: Creates point-in-time snapshots of the dataset at specified intervals. RDB files are compact and efficient for backups but do not provide real-time durability.
+
+  - Configuration: Set in `redis.conf` with the `save` directive.
+  
+    ```bash
+    # Save the dataset every 60 seconds if at least 1000 keys changed
+    save 60 1000
+    ```
+
+  - **BGSAVE**: Triggers a background save operation to create an RDB snapshot.
+
+    ```bash
+    BGSAVE   # Initiates a background save operation
+    ```
+
+  - **LASTSAVE**: Returns the UNIX timestamp of the last successful RDB save.
+
+    ```bash
+    LASTSAVE  # Get the timestamp of the last RDB save
+    ```
+
+- **AOF (Append-Only File)**: Logs every write operation received by the server. AOF provides better durability by replaying the logs to reconstruct the dataset.
+
+  - Configuration: Set in `redis.conf` with the `appendonly` directive.
+  
+    ```bash
+    appendonly yes    # Enable AOF persistence
+    appendfsync everysec   # Sync every second
+    ```
+
+  - **BGREWRITEAOF**: Triggers a background rewrite of the AOF file to optimize its size.
+
+    ```bash
+    BGREWRITEAOF   # Initiates a background rewrite of the AOF file
+    ```
+
+  - **AOFLOAD**: Replays the AOF log during startup to reconstruct the dataset.
+
+    ```bash
+    # No specific command for AOF loading; done automatically on startup
+    ```
+
+- **Hybrid Approach**: You can use both RDB and AOF together to combine the benefits of both methods. This approach ensures both fast restarts and durability.
+
+  - Configuration: Set in `redis.conf` to enable both RDB and AOF.
+
+    ```bash
+    save 60 1000      # RDB settings
+    appendonly yes    # AOF settings
+    ```
+
+- **Redis Persistence Configuration Tips**:
+  - **RDB**: Good for backups and quick restarts; less frequent durability.
+  - **AOF**: Better for durability; larger files and slower restarts.
+  - **Hybrid**: Balances durability with efficient restart times.
+
+Redis's persistence options allow you to choose the right balance between performance and durability based on your application's requirements.
+
+
+## Use Cases
+
+
+### Caching with Redis
+
+Redis is widely used for caching to improve performance by storing frequently accessed data in memory. Caching with Redis helps reduce the load on databases and improves response times for applications.
+
+- **SET**: Stores a key-value pair in Redis with optional expiration time. This is useful for caching data with a defined time-to-live (TTL).
+
+  ```bash
+  SET cachekey "cached value" EX 300   # Set a key with value and expiration time of 300 seconds
+  ```
+
+- **GET**: Retrieves the value associated with a key. If the key does not exist or has expired, it returns nil.
+
+  ```bash
+  GET cachekey   # Retrieve the cached value associated with "cachekey"
+  ```
+
+- **EXPIRE**: Sets an expiration time for an existing key. This can be used to update the TTL of cached data.
+
+  ```bash
+  EXPIRE cachekey 600   # Set or update the expiration time of "cachekey" to 600 seconds
+  ```
+
+- **TTL**: Returns the remaining time to live (TTL) of a key. This helps monitor the validity period of cached items.
+
+  ```bash
+  TTL cachekey   # Get the remaining TTL of "cachekey"
+  ```
+
+- **CACHE MISS HANDLING**: When a cache miss occurs (i.e., the requested data is not in the cache), fetch the data from the primary data source, store it in Redis, and return it to the user.
+
+  ```javascript
+  // Example in JavaScript
+  async function getData(key) {
+    let value = await redis.get(key);
+    if (value === null) {
+      value = fetchFromPrimarySource(key);  // Fetch data from the database or another source
+      await redis.set(key, value, 'EX', 3600); // Cache data with an expiration of 1 hour
+    }
+    return value;
+  }
+  ```
+
+Redis caching is effective for reducing database load and speeding up data retrieval, especially for data that is frequently accessed or computationally expensive to generate. Proper cache management and expiration policies are crucial for maintaining cache effectiveness and consistency.
+
+
 
 
 </details>
